@@ -12,7 +12,9 @@ import {
   Share2, 
   Lock,
   Clock,
-  Send
+  Send,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,19 +104,33 @@ export default function LinkedInPosts() {
     }
   }, []);
 
+  // Robust scroll handlers
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
+
   // Mouse wheel horizontal scroll fix
   useEffect(() => {
     const el = scrollRef.current;
     if (el) {
       const onWheel = (e: WheelEvent) => {
         if (e.deltaY === 0) return;
-        e.preventDefault();
-        el.scrollTo({
-          left: el.scrollLeft + e.deltaY * 2,
-          behavior: 'smooth'
-        });
+        const canScrollLeft = el.scrollLeft > 0;
+        const canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth;
+        
+        if ((e.deltaY < 0 && canScrollLeft) || (e.deltaY > 0 && canScrollRight)) {
+          e.preventDefault();
+          el.scrollTo({
+            left: el.scrollLeft + e.deltaY * 2.5,
+            behavior: 'auto'
+          });
+        }
       };
-      el.addEventListener('wheel', onWheel);
+      el.addEventListener('wheel', onWheel, { passive: false });
       return () => el.removeEventListener('wheel', onWheel);
     }
   }, [mounted]);
@@ -314,7 +330,21 @@ export default function LinkedInPosts() {
       </AnimatePresence>
 
       {/* Posts Sliding Panel */}
-      <div className="relative">
+      <div className="relative group">
+        {/* Navigation Arrows */}
+        <button 
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 p-2 bg-white/80 backdrop-blur-sm shadow-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-gray-100"
+        >
+          <ChevronLeft className="w-6 h-6 text-gray-600" />
+        </button>
+        <button 
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 p-2 bg-white/80 backdrop-blur-sm shadow-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity hidden md:block border border-gray-100"
+        >
+          <ChevronRight className="w-6 h-6 text-gray-600" />
+        </button>
+
         <div 
           ref={scrollRef}
           className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory no-scrollbar scroll-smooth"
