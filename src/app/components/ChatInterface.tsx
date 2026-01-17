@@ -28,11 +28,12 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
+  initialQuery: string;
   onBack: () => void;
 }
 
 // ============ MAIN COMPONENT ============
-export default function ChatInterface({ onBack }: ChatInterfaceProps) {
+export default function ChatInterface({ onBack, initialQuery }: ChatInterfaceProps) {
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -50,6 +51,13 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
     const welcome = "Hello! 👋 I'm Portfolio AI, Yash's virtual assistant. Ask me about his projects, skills, or experience!";
     addMessage('assistant', welcome, 'pattern');
     if (!globalMute) speechController.speak(welcome);
+
+    // Send initial query if provided
+    if (initialQuery.trim()) {
+      setTimeout(() => {
+        handleSend(initialQuery);
+      }, 500);
+    }
   }, []);
 
   // Auto-scroll on new messages
