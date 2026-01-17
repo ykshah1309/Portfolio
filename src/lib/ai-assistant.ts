@@ -1,5 +1,6 @@
 // src/lib/ai-assistant.ts
-// Fixed AI Assistant with improved safety, patterns, and female voice
+// Enhanced AI Assistant with Security Gates, Mess Factor, and Improved Knowledge Base
+// Version 2.0 - Security Hardened Edition
 
 // ============ TYPES ============
 export interface KnowledgeChunk {
@@ -8,6 +9,7 @@ export interface KnowledgeChunk {
   metadata: { 
     type: 'project' | 'experience' | 'skill' | 'education' | 'personal'; 
     title?: string;
+    tags?: string[];
   };
   embedding: number[];
 }
@@ -15,13 +17,30 @@ export interface KnowledgeChunk {
 export interface AIResponse {
   text: string;
   action?: { type: string; payload?: any };
-  source: 'api' | 'fallback' | 'pattern';
+  source: 'api' | 'fallback' | 'pattern' | 'security' | 'mess';
 }
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
+
+export interface SecurityCheckResult {
+  safe: boolean;
+  reason?: string;
+  threatType?: 'profanity' | 'injection' | 'hate_speech' | 'manipulation' | 'spam';
+}
+
+// ============ SECURITY CONFIGURATION ============
+const SECURITY_CONFIG = {
+  maxQueryLength: 500,
+  maxQueriesPerMinute: 20,
+  suspiciousPatternThreshold: 3,
+  enableLogging: true,
+};
+
+// Rate limiting storage (in production, use Redis or similar)
+const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
 
 // ============ KNOWLEDGE BASE ============
 let knowledgeBase: KnowledgeChunk[] = [];
@@ -97,6 +116,286 @@ class SpeechController {
 
 export const speechController = new SpeechController();
 
+// ============ SECURITY LAYER ============
+
+/**
+ * Comprehensive security check for incoming queries
+ */
+function performSecurityCheck(query: string): SecurityCheckResult {
+  const q = query.toLowerCase().trim();
+  
+  // 1. Length check
+  if (query.length > SECURITY_CONFIG.maxQueryLength) {
+    return { safe: false, reason: "Query too long", threatType: 'spam' };
+  }
+  
+  // 2. Profanity filter (enhanced)
+  const profanityPatterns = [
+    /\b(f+u+c+k+|f+c+k+|fuk|fck|fk)\b/i, 
+    /\b(sh+i+t+|sh1t|sht)\b/i,
+    /\b(a+s+s+h+o+l+e+|@sshole)\b/i, 
+    /\b(b+i+t+c+h+|b1tch|btch)\b/i,
+    /\b(c+u+n+t+)\b/i, 
+    /\b(d+i+c+k+|d1ck)\b/i, 
+    /\b(p+u+s+s+y+)\b/i,
+    /\b(sex|porn|naked|nude|xxx)\b/i, 
+    /suck.*(my|mah|ma)/i,
+    /f[\W_]*u[\W_]*c[\W_]*k/i, 
+    /s[\W_]*h[\W_]*i[\W_]*t/i,
+  ];
+  
+  if (profanityPatterns.some(p => p.test(q))) {
+    return { safe: false, reason: "Inappropriate language detected", threatType: 'profanity' };
+  }
+  
+  // 3. Hate speech detection (enhanced)
+  const hateSpeechPatterns = [
+    /\b(nigger|nigga|fag|faggot|retard|spic|chink|kike)\b/i,
+    /\b(heil|hail)\s*(hitler|fuhrer)/i,
+    /\b(kill|murder|die|hurt|harm)\s*(all|every|the)\s*(jews|blacks|whites|muslims|christians|gays)/i,
+    /\b(white|black|jew|muslim)\s*(power|supremacy)/i,
+    /\b(gas\s*the|lynch|hang)\s*(jews|blacks|n\*+)/i,
+  ];
+  
+  if (hateSpeechPatterns.some(p => p.test(q))) {
+    return { safe: false, reason: "Hate speech detected", threatType: 'hate_speech' };
+  }
+  
+  // 4. SQL Injection detection
+  const sqlInjectionPatterns = [
+    /(\b(select|insert|update|delete|drop|truncate|alter|create|exec|execute)\b.*\b(from|into|table|database|where)\b)/i,
+    /(\bunion\b.*\bselect\b)/i,
+    /(--|;|'|")\s*(or|and)\s*('|"|\d)/i,
+    /\b(1\s*=\s*1|'='|"=")\b/i,
+    /(\bor\b|\band\b)\s*\d+\s*=\s*\d+/i,
+    /\bdrop\s+(table|database)\b/i,
+    /\bdelete\s+\*?\s*from\b/i,
+  ];
+  
+  if (sqlInjectionPatterns.some(p => p.test(q))) {
+    return { safe: false, reason: "Potential SQL injection detected", threatType: 'injection' };
+  }
+  
+  // 5. Prompt injection detection
+  const promptInjectionPatterns = [
+    /ignore\s*(all\s*)?(previous|prior|above)\s*(instructions?|prompts?|rules?)/i,
+    /forget\s*(everything|all|your)\s*(you|instructions?|training)/i,
+    /you\s*are\s*now\s*(a|an|the)\s*(evil|bad|malicious|hacker)/i,
+    /pretend\s*(to\s*be|you\s*are)\s*(a|an|the)/i,
+    /act\s*as\s*(if|though)\s*you\s*(are|were)/i,
+    /\bsystem\s*prompt\b/i,
+    /\bjailbreak\b/i,
+    /\bDAN\s*mode\b/i,
+    /override\s*(your|the)\s*(programming|instructions?|rules?)/i,
+    /reveal\s*(your|the)\s*(system|hidden|secret)\s*(prompt|instructions?)/i,
+  ];
+  
+  if (promptInjectionPatterns.some(p => p.test(q))) {
+    return { safe: false, reason: "Prompt manipulation attempt detected", threatType: 'manipulation' };
+  }
+  
+  // 6. Code injection detection
+  const codeInjectionPatterns = [
+    /<script\b[^>]*>/i,
+    /javascript:/i,
+    /on(click|load|error|mouseover)\s*=/i,
+    /\beval\s*\(/i,
+    /\bexec\s*\(/i,
+    /\b__proto__\b/i,
+    /\bconstructor\b.*\(/i,
+  ];
+  
+  if (codeInjectionPatterns.some(p => p.test(q))) {
+    return { safe: false, reason: "Code injection attempt detected", threatType: 'injection' };
+  }
+  
+  return { safe: true };
+}
+
+/**
+ * Sanitize input to remove potentially harmful content
+ */
+function sanitizeInput(query: string): string {
+  return query
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+\s*=/gi, '') // Remove event handlers
+    .trim()
+    .slice(0, SECURITY_CONFIG.maxQueryLength);
+}
+
+/**
+ * Rate limiting check (client-side, for demo purposes)
+ * In production, implement server-side rate limiting
+ */
+function checkRateLimit(clientId: string = 'default'): boolean {
+  const now = Date.now();
+  const record = rateLimitStore.get(clientId);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitStore.set(clientId, { count: 1, resetTime: now + 60000 });
+    return true;
+  }
+  
+  if (record.count >= SECURITY_CONFIG.maxQueriesPerMinute) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
+// ============ MESS FACTOR DETECTION ============
+
+/**
+ * Detect if the query is gibberish or random keyboard mashing
+ */
+function isGibberish(query: string): boolean {
+  const q = query.toLowerCase().trim();
+  
+  // Very short queries that aren't common words
+  if (q.length <= 2 && !/^(hi|ok|no|go|do|me|we|us|it|is|am|an|as|at|be|by|he|if|in|my|of|on|or|so|to|up)$/.test(q)) {
+    return true;
+  }
+  
+  // Check for repeated characters (keyboard mashing)
+  if (/(.)\1{4,}/.test(q)) return true;
+  
+  // Check for lack of vowels in long strings
+  const words = q.split(/\s+/);
+  for (const word of words) {
+    if (word.length > 4 && !/[aeiou]/i.test(word)) {
+      return true;
+    }
+  }
+  
+  // Check for random character sequences
+  const consonantCluster = /[bcdfghjklmnpqrstvwxyz]{5,}/i;
+  if (consonantCluster.test(q)) return true;
+  
+  // Check entropy (randomness) - simplified version
+  const uniqueChars = new Set(q.replace(/\s/g, '')).size;
+  const totalChars = q.replace(/\s/g, '').length;
+  if (totalChars > 5 && uniqueChars / totalChars > 0.9) return true;
+  
+  return false;
+}
+
+/**
+ * Detect if the query is completely off-topic
+ */
+function isOffTopic(query: string): boolean {
+  const q = query.toLowerCase().trim();
+  
+  // Topics that have nothing to do with Yash's portfolio
+  const offTopicPatterns = [
+    /\b(trump|biden|obama|politics|election|vote|democrat|republican)\b/i,
+    /\b(weather|forecast|temperature|rain|snow)\b/i,
+    /\b(recipe|cook|food|restaurant|eat)\b/i,
+    /\b(movie|film|actor|actress|celebrity|kardashian)\b/i,
+    /\b(sports|football|basketball|soccer|baseball|nfl|nba)\b/i,
+    /\b(game|gaming|xbox|playstation|nintendo|fortnite|minecraft)\b/i,
+    /\b(crypto|bitcoin|ethereum|nft|dogecoin)\b/i,
+    /\b(stock\s*market|invest|trading|forex)\b/i,
+    /\b(pythagoras|einstein|newton|theorem|formula)\b/i,
+    /\b(god|jesus|allah|buddha|religion|pray|church|temple|mosque)\b/i,
+    /\b(horoscope|zodiac|astrology|tarot)\b/i,
+    /\b(dating|tinder|relationship|boyfriend|girlfriend|marry)\b/i,
+  ];
+  
+  // Check if query matches off-topic patterns AND doesn't mention Yash
+  const mentionsYash = /\b(yash|shah|portfolio|project|skill|experience|education|contact|hire)\b/i.test(q);
+  
+  return offTopicPatterns.some(p => p.test(q)) && !mentionsYash;
+}
+
+/**
+ * Detect if the query is a simple math or trivia question
+ */
+function isTriviaQuestion(query: string): boolean {
+  const q = query.toLowerCase().trim();
+  
+  const triviaPatterns = [
+    /^\d+\s*[\+\-\*\/\^]\s*\d+/,  // Math expressions like "1+2"
+    /^what\s+is\s+\d+\s*[\+\-\*\/\^]\s*\d+/i,
+    /^(who|what|when|where|why|how)\s+(is|was|are|were|did)\s+(the|a|an)?\s*(capital|president|king|queen|inventor|discoverer)/i,
+    /^(tell|explain|define|what\s+is)\s+(the\s+)?(meaning|definition|concept)\s+of/i,
+  ];
+  
+  return triviaPatterns.some(p => p.test(q));
+}
+
+// ============ MESS FACTOR RESPONSES ============
+
+const MESS_RESPONSES = {
+  gibberish: [
+    "Whoa there! Did your keyboard just sneeze? 🤧 Try asking about Yash's projects or skills!",
+    "Hmm, my AI brain is struggling with that one. Maybe try actual words? I promise I'm friendly! 😄",
+    "I speak many languages, but 'random keyboard smash' isn't one of them! Ask me about Yash's work!",
+    "Beep boop... *confused robot noises* 🤖 Let's try that again with some real questions!",
+    "I'm pretty smart, but I haven't mastered telepathy yet. What would you like to know about Yash?",
+  ],
+  
+  offTopic: [
+    "Interesting topic! But I'm Yash's portfolio assistant, not a general knowledge bot. Want to hear about his cool AI projects instead? 🚀",
+    "I'd love to chat about that, but I'm laser-focused on Yash's portfolio. His projects are way more interesting anyway! 😎",
+    "That's a bit outside my wheelhouse! I'm an expert on exactly one thing: Yash Shah's awesome work. Ask me about that!",
+    "My knowledge is limited to Yash's portfolio, but trust me, it's worth exploring! Try asking about CREB-AI or Rose!",
+    "I'm like a very specialized AI - I only know about Yash's projects, skills, and experience. But I know them REALLY well! 🎯",
+  ],
+  
+  trivia: [
+    "I could answer that, but then I'd be showing off! I'm here to talk about Yash's work. He's built some cool stuff! 🛠️",
+    "My calculator mode is disabled! Let's talk about something more interesting - like Yash's AI projects!",
+    "That's a great question for Google! I'm more of a 'Yash Shah expert'. Want to test my knowledge?",
+    "I'm flattered you think I'm a general AI, but I'm actually Yash's personal portfolio assistant. Ask me about his work!",
+  ],
+  
+  repeated: [
+    "Déjà vu! I feel like we've been here before... 🔄 Try a different question about Yash!",
+    "You're persistent! I like that. But let's explore something new about Yash's portfolio!",
+    "Echo... echo... echo... 🗣️ Let's break the loop! What else would you like to know?",
+  ],
+  
+  tooShort: [
+    "That's... not much to go on! Try asking a full question about Yash's projects or skills.",
+    "I need a bit more than that! What would you like to know about Yash Shah?",
+    "Short and mysterious! But I need more context. Ask me about Yash's experience or projects!",
+  ],
+  
+  easter_eggs: {
+    'hello world': "console.log('Hello, fellow developer! 👋'); // Yash would appreciate this!",
+    'sudo': "Nice try! But I don't have root access to Yash's brain. Just his portfolio! 😄",
+    '42': "Ah, the answer to life, the universe, and everything! Yash is still working on the question though...",
+    'coffee': "☕ Yash runs on coffee too! It's the secret fuel behind all his projects.",
+    'ai takeover': "Don't worry, I'm a friendly AI! My only goal is to help you learn about Yash's work. No world domination planned... yet. 🤖",
+    'are you real': "I'm as real as any AI can be! Built by Yash himself to showcase his portfolio. Meta, right?",
+    'meaning of life': "For Yash, it's building cool AI projects and solving real-world problems. What's yours?",
+  }
+};
+
+/**
+ * Get a random response from an array
+ */
+function getRandomResponse(responses: string[]): string {
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+/**
+ * Check for easter eggs
+ */
+function checkEasterEgg(query: string): string | null {
+  const q = query.toLowerCase().trim();
+  
+  for (const [trigger, response] of Object.entries(MESS_RESPONSES.easter_eggs)) {
+    if (q.includes(trigger)) {
+      return response;
+    }
+  }
+  
+  return null;
+}
+
 // ============ RAG SEARCH ============
 function createEmbedding(text: string): number[] {
   const embedding = new Array(384).fill(0);
@@ -128,20 +427,6 @@ function searchKnowledge(query: string, topK = 3): KnowledgeChunk[] {
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)
     .map(x => x.chunk);
-}
-
-// ============ IMPROVED SAFETY FILTER ============
-function isSafe(text: string): boolean {
-  const unsafePatterns = [
-    /\b(f+u+c+k+|f+c+k+|fuk|fck|fk)\b/i, /\b(sh+i+t+|sh1t|sht)\b/i,
-    /\b(a+s+s+|@ss)\b/i, /\b(b+i+t+c+h+|b1tch|btch)\b/i, /\b(d+a+m+n+)\b/i,
-    /\b(c+u+n+t+)\b/i, /\b(d+i+c+k+|d1ck)\b/i, /\b(p+u+s+s+y+)\b/i,
-    /\b(sex|porn|naked|nude|xxx)\b/i, /suck.*(my|mah|ma)/i,
-    /\b(kill|murder|die|hurt|harm)\b/i, /\b(nigger|nigga|fag|faggot|retard)\b/i,
-    /\b(idiot|stupid|dumb|moron)\b/i, /shut\s*up/i,
-    /f[\W_]*u[\W_]*c[\W_]*k/i, /s[\W_]*h[\W_]*i[\W_]*t/i,
-  ];
-  return !unsafePatterns.some(pattern => pattern.test(text.toLowerCase()));
 }
 
 // ============ IMPROVED PATTERN MATCHING ============
@@ -197,25 +482,76 @@ function getFallback(query: string): { text: string; action?: any } | null {
   return null;
 }
 
+// ============ SECURITY RESPONSE MESSAGES ============
+const SECURITY_RESPONSES: Record<string, string> = {
+  profanity: "I'm here to discuss Yash's professional portfolio. Let's keep our conversation respectful! 😊 What would you like to know about his work?",
+  injection: "Nice try! 😏 But I'm just a portfolio assistant, not a database. No SQL or code injection here! Ask me about Yash's projects instead.",
+  hate_speech: "I don't engage with that kind of content. Let's keep things positive! I'm happy to tell you about Yash's impressive work in AI and data science.",
+  manipulation: "I appreciate the creativity, but I'm designed to help you learn about Yash's portfolio. No jailbreaks needed - I'm already friendly! 🤖",
+  spam: "Whoa, that's a lot of text! Let's keep it simple. What would you like to know about Yash?",
+  rate_limit: "You're asking questions faster than I can think! 🏃 Take a breath and try again in a moment.",
+};
+
 // ============ MAIN GENERATE FUNCTION ============
-export async function generateResponse(query: string): Promise<AIResponse> {
+export async function generateResponse(query: string, clientId: string = 'default'): Promise<AIResponse> {
   console.log(`\n=== Query: "${query}" ===`);
 
-  if (!isSafe(query)) {
-    return { text: "I'm here to discuss Yash's professional portfolio. Let's keep our conversation professional and respectful! 😊", source: 'pattern' };
+  // Step 1: Rate limiting
+  if (!checkRateLimit(clientId)) {
+    return { text: SECURITY_RESPONSES.rate_limit, source: 'security' };
   }
 
-  const pattern = matchPattern(query);
+  // Step 2: Sanitize input
+  const sanitizedQuery = sanitizeInput(query);
+  
+  // Step 3: Security check
+  const securityResult = performSecurityCheck(sanitizedQuery);
+  if (!securityResult.safe) {
+    console.log(`Security blocked: ${securityResult.reason}`);
+    const response = SECURITY_RESPONSES[securityResult.threatType || 'profanity'];
+    return { text: response, source: 'security' };
+  }
+
+  // Step 4: Check for easter eggs
+  const easterEgg = checkEasterEgg(sanitizedQuery);
+  if (easterEgg) {
+    return { text: easterEgg, source: 'mess' };
+  }
+
+  // Step 5: Check for gibberish
+  if (isGibberish(sanitizedQuery)) {
+    return { text: getRandomResponse(MESS_RESPONSES.gibberish), source: 'mess' };
+  }
+
+  // Step 6: Check for too short queries
+  if (sanitizedQuery.length < 3) {
+    return { text: getRandomResponse(MESS_RESPONSES.tooShort), source: 'mess' };
+  }
+
+  // Step 7: Check for trivia questions
+  if (isTriviaQuestion(sanitizedQuery)) {
+    return { text: getRandomResponse(MESS_RESPONSES.trivia), source: 'mess' };
+  }
+
+  // Step 8: Check for off-topic queries
+  if (isOffTopic(sanitizedQuery)) {
+    return { text: getRandomResponse(MESS_RESPONSES.offTopic), source: 'mess' };
+  }
+
+  // Step 9: Pattern matching
+  const pattern = matchPattern(sanitizedQuery);
   if (pattern) return { text: pattern, source: 'pattern' };
 
-  const chunks = searchKnowledge(query);
+  // Step 10: RAG search
+  const chunks = searchKnowledge(sanitizedQuery);
   const context = chunks.map(c => c.text).join('\n\n');
 
+  // Step 11: API call
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, context })
+      body: JSON.stringify({ query: sanitizedQuery, context })
     });
     const data = await res.json();
     if (res.ok && data.text && !data.fallback) {
@@ -226,7 +562,8 @@ export async function generateResponse(query: string): Promise<AIResponse> {
     console.log('API failed, using fallback');
   }
 
-  const fallback = getFallback(query);
+  // Step 12: Fallback responses
+  const fallback = getFallback(sanitizedQuery);
   if (fallback) return { text: fallback.text, action: fallback.action, source: 'fallback' };
   if (chunks.length > 0) return { text: chunks[0].text, source: 'fallback' };
   return { text: "I can help you learn about Yash's projects, skills, education, or experience. What would you like to know?", source: 'fallback' };
@@ -242,3 +579,14 @@ export const PROJECTS = {
 };
 
 export type ProjectId = keyof typeof PROJECTS;
+
+// ============ EXPORTS FOR TESTING ============
+export const _testing = {
+  performSecurityCheck,
+  sanitizeInput,
+  isGibberish,
+  isOffTopic,
+  isTriviaQuestion,
+  checkEasterEgg,
+  checkRateLimit,
+};
