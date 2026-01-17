@@ -23,7 +23,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  source?: 'api' | 'fallback' | 'pattern';
+  source?: 'api' | 'fallback' | 'pattern' | 'security' | 'mess';
   isMuted?: boolean;
 }
 
@@ -266,6 +266,8 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
                         {msg.source === 'api' && '🤖 AI'}
                         {msg.source === 'fallback' && '📚 Local'}
                         {msg.source === 'pattern' && '💬 Quick'}
+                        {msg.source === 'security' && '🛡️ Security'}
+                        {msg.source === 'mess' && '🧹 Mess'}
                       </span>
                     </div>
                   )}
