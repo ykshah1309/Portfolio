@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Briefcase, GraduationCap, Mail, FileText, User } from 'lucide-react';
 import ChatInterface from './ChatInterface';
 import FluidBackground from './FluidBackground';
+import LinkedInPosts from './LinkedInPosts';
 import Image from 'next/image'; // Import next/image if using Next.js
 
 export default function LandingPage() {
@@ -175,6 +176,15 @@ export default function LandingPage() {
                 <p className="text-gray-500 text-sm italic">
                   Click any button above or type your question to begin...
                 </p>
+              </motion.div>
+
+              {/* LinkedIn Posts Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.4, duration: 0.8 }}
+              >
+                <LinkedInPosts />
               </motion.div>
             </div>
           </motion.div>
