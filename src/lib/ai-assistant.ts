@@ -464,11 +464,11 @@ function matchPattern(query: string): string | null {
 // ============ FALLBACK RESPONSES ============
 const FALLBACKS: Record<string, { text: string; action?: any }> = {
   project: { text: "Yash has built several impressive projects including CREB-AI (real estate platform with AI matching), Rose (privacy-first offline voice assistant), Pandora's Box (health AI with 99.4% safety filtering), and ReputeFlow (reputation management tool). Click on any project in the panel to learn more!", action: { type: 'SHOW_PROJECTS' } },
-  skill: { text: "Yash's technical skills include:\n\n💻 Languages: Python, TypeScript, JavaScript, SQL\n🤖 AI/ML: TensorFlow, PyTorch, RAG Systems, LLM Fine-tuning\n☁️ Cloud: AWS (Lambda, S3, DynamoDB), GCP (BigQuery, Vertex AI)\n🛠️ Frameworks: React, Next.js, Node.js, FastAPI\n📊 Tools: Docker, Tableau, Power BI" },
-  contact: { text: "📧 Email: ykshah1309@gmail.com\n💼 LinkedIn: linkedin.com/in/yash-kamlesh-shah\n💻 GitHub: github.com/ykshah1309\n📱 Phone: +1 (862) 230-8196\n\nYash is actively seeking full-time opportunities in Data Science and AI/ML Engineering!" },
-  education: { text: "🎓 MS Data Science from NJIT (GPA: 3.8/4.0, Dec 2025)\nCourses: Machine Learning, Deep Learning, Cloud Computing, Big Data\n\n🎓 BTech Computer Science from Mumbai University (2020-2024)" },
-  experience: { text: "💼 Full-Stack Engineer @ YogoSocial (NJIT Capstone)\n• Built serverless analytics pipeline handling 10K+ concurrent events\n• Created REST APIs with sub-200ms response times\n\n💼 Research Assistant @ NJIT MiXR Lab\n• Designed VR training data analysis pipeline\n• Reduced manual analysis time by 80%" },
-  about: { text: "Yash Shah is a Data Scientist and AI/ML Engineer who recently graduated with an MS in Data Science from NJIT (GPA: 3.8/4.0). He specializes in building production-ready LLM systems, RAG architectures, and full-stack MLOps solutions. His notable projects include CREB-AI, Rose, and Pandora's Box." }
+  skill: { text: "Yash's technical skills include:\n\n💻 Languages: Python (Expert), TypeScript (Advanced), JavaScript, SQL, PHP\n🤖 AI/ML: TensorFlow, PyTorch, RAG Systems, LLM Fine-tuning, MLOps\n☁️ Cloud: AWS (Lambda, S3, DynamoDB, RDS, Amplify), GCP (BigQuery, Vertex AI)\n🛠️ Frameworks: React, Next.js, Node.js, FastAPI\n📊 Tools: Docker, Tableau, Power BI, Jenkins" },
+  contact: { text: "📧 Email: ykshah1309@gmail.com\n💼 LinkedIn: linkedin.com/in/yashshah1309\n💻 GitHub: github.com/ykshah1309\n📱 Phone: +1 (862) 230-8196\n\nYash is a Fall 2025 Graduate available for full-time roles immediately!" },
+  education: { text: "🎓 MS Data Science from NJIT (GPA: 3.8/4.0, Dec 2025)\nComputational Track. Courses: Machine Learning, Deep Learning, Cloud Computing, Big Data\n\n🎓 BTech Computer Science from Mumbai University (2020-2024)\nMinor in Data Science." },
+  experience: { text: "💼 Full-Stack Engineer @ YogoSocial (NJIT Capstone)\n• Built serverless analytics pipeline handling 10K+ concurrent events\n• Created REST APIs with sub-200ms response times\n\n💼 Research Assistant @ NJIT MiXR Lab\n• Designed VR training data analysis pipeline for forensic training\n• Reduced manual analysis time by 80%" },
+  about: { text: "Yash Shah is a Data Scientist and AI/ML Engineer with an MS in Data Science from NJIT (GPA: 3.8/4.0). He specializes in building production-ready LLM systems, RAG architectures, and full-stack MLOps solutions. He often says 'Hello there, old sport' and has a Gatsby-esque flair." }
 };
 
 function getFallback(query: string): { text: string; action?: any } | null {
@@ -565,7 +565,16 @@ export async function generateResponse(query: string, clientId: string = 'defaul
   // Step 12: Fallback responses
   const fallback = getFallback(sanitizedQuery);
   if (fallback) return { text: fallback.text, action: fallback.action, source: 'fallback' };
-  if (chunks.length > 0) return { text: chunks[0].text, source: 'fallback' };
+  
+  // If we have knowledge chunks, use the best one as a fallback if API fails
+  if (chunks.length > 0) {
+    return { 
+      text: chunks[0].text, 
+      source: 'fallback',
+      action: chunks[0].metadata.type === 'project' ? { type: 'SHOW_PROJECTS' } : undefined
+    };
+  }
+  
   return { text: "I can help you learn about Yash's projects, skills, education, or experience. What would you like to know?", source: 'fallback' };
 }
 
