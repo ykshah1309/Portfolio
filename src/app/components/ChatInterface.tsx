@@ -1,311 +1,291 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, User, Briefcase, GraduationCap, Mail, FileText, ArrowLeft, Github, X, Volume2, VolumeX, ChevronRight, Loader2 } from 'lucide-react';
+import { 
+  Mic, User, Briefcase, GraduationCap, Mail, FileText, 
+  ArrowLeft, Github, X, Volume2, VolumeX, ChevronRight,
+  Loader2, ExternalLink
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { aiAssistant, ragSystem, initialKnowledge, ChatMessage } from '@/lib/ai-assistant';
-import ReactPlayer from 'react-player';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import FluidBackground from '../components/FluidBackground';
+import { 
+  generateResponse, 
+  speechController, 
+  PROJECTS, 
+  ProjectId,
+  AIResponse 
+} from '../../lib/ai-assistant';
 
+// ============ TYPES ============
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
-  source?: string; // Track where the response came from
+  source?: 'api' | 'fallback' | 'pattern';
+  isMuted?: boolean;
 }
 
 interface ChatInterfaceProps {
-  initialQuery?: string;
   onBack: () => void;
 }
 
-// Enhanced PROJECT_DATA with fullDescription for hover preview
-const PROJECT_DATA: Record<string, {
-  title: string;
-  videoUrl: string;
-  description: string;
-  fullDescription?: string;
-  tags: string[];
-  repoUrl: string;
-}> = {
-  'proj-rose': {
-    title: 'Rose: Privacy-First Voice Assistant',
-    videoUrl: 'https://www.youtube.com/watch?v=YOUR_ROSE_VIDEO_ID', // REPLACE WITH YOUR VIDEO
-    description: 'Offline Windows service using Vosk ASR & local 7B LLM. Sub-2s latency.',
-    fullDescription: 'Rose is a privacy-first voice assistant that runs entirely offline as a Windows service. Built with Python, it uses Vosk library for speech recognition and a locally hosted 7B parameter large language model for intelligence processing. The system achieves sub-two second response latency while maintaining complete user privacy. Features include RAG-based indexing for context-aware responses and prompt engineering for recruitment insights.',
-    tags: ['Python', 'LLM', 'Vosk', 'RAG', 'Privacy'],
-    repoUrl: 'https://github.com/ykshah1309/rose'
-  },
-  'proj-pandora': {
-    title: "Pandora's Box: Health AI",
-    videoUrl: 'https://www.youtube.com/watch?v=YOUR_PANDORA_VIDEO_ID', // REPLACE WITH YOUR VIDEO
-    description: 'Health AI with multi-persona response system and strict content filtering.',
-    fullDescription: "Pandora's Box is a conversational Health AI system with advanced safety features. It implements a multi-persona response mechanism with sophisticated content filtering that successfully blocks 99.4% of unsafe or inappropriate medical queries while providing helpful health information. Built with Next.js, TypeScript, and leverages prompt engineering to transform complex health data into personal and actionable insights.",
-    tags: ['AI Safety', 'Healthcare', 'Next.js', 'TypeScript', 'Prompt Engineering'],
-    repoUrl: 'https://github.com/ykshah1309/pandoras-box'
-  },
-  'exp-yogosocial': {
-    title: 'YogoSocial: Serverless Analytics Platform',
-    videoUrl: 'https://www.youtube.com/watch?v=YOUR_YOGO_VIDEO_ID', // REPLACE WITH YOUR VIDEO
-    description: 'Serverless AWS pipeline handling 10K+ concurrent events with sub-second latency.',
-    fullDescription: 'At YogoSocial (NJIT Capstone), Yash worked as a Full-Stack Engineer building a B2B and B2G marketplace platform. He engineered a serverless analytics pipeline using AWS Lambda and DynamoDB that handles 10K+ concurrent events with sub-second latency. Also built high-performance REST APIs in TypeScript with sub-200ms response times and implemented GDPR/CCPA-compliant cascading account deletion with full audit logging and secure JWT authentication.',
-    tags: ['AWS Lambda', 'DynamoDB', 'TypeScript', 'Serverless', 'GraphQL'],
-    repoUrl: 'https://github.com/ykshah1309/yogosocial'
-  },
-  'proj-creb-ai': {
-    title: 'CREB-AI: Real Estate Platform',
-    videoUrl: 'https://www.youtube.com/watch?v=YOUR_CREB_VIDEO_ID', // REPLACE WITH YOUR VIDEO
-    description: 'Commercial real estate platform with RAG-powered chatbot for lease negotiation.',
-    fullDescription: 'CREB-AI is a full-stack commercial real estate platform engineered from scratch. It features a Tinder-like swipe interface for property matchmaking and a RAG-powered chatbot for lease negotiation assistance. The platform includes real-time secure messaging, admin dashboards with live analytics using Chart.js, and a full verification workflow with e-signature features. Built with Next.js, TypeScript, Supabase database, and OpenAI GPT API integration.',
-    tags: ['Next.js', 'RAG', 'Supabase', 'OpenAI', 'Real Estate'],
-    repoUrl: 'https://github.com/ykshah1309/creb-ai'
-  },
-  'proj-reputeflow': {
-    title: 'ReputeFlow: Reputation Management',
-    videoUrl: 'https://www.youtube.com/watch?v=YOUR_REPUTEFLOW_VIDEO_ID', // REPLACE WITH YOUR VIDEO
-    description: 'Modular Python-based reputation management tool with plugin architecture.',
-    fullDescription: 'ReputeFlow is a modular Python-based reputation management and workflow automation tool. It features a plugin-based architecture enabling plug-and-play data ingestion/processing modules from multiple sources. Includes an interactive analytics dashboard for real-time reporting built with Streamlit/Plotly. The tool helps businesses monitor their online reputation with comprehensive visualization and data processing capabilities.',
-    tags: ['Python', 'Streamlit', 'Plotly', 'Analytics', 'Plugin Architecture'],
-    repoUrl: 'https://github.com/ykshah1309/ReputeFlow'
-  }
-};
-
-export default function ChatInterface({ initialQuery, onBack }: ChatInterfaceProps) {
+// ============ MAIN COMPONENT ============
+export default function ChatInterface({ onBack }: ChatInterfaceProps) {
+  // State
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [activeProject, setActiveProject] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [showProjectsPanel, setShowProjectsPanel] = useState(false);
-  const [hoveredProject, setHoveredProject] = useState<string | null>(null);
+  const [globalMute, setGlobalMute] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
+  const [hoveredProject, setHoveredProject] = useState<ProjectId | null>(null);
   const [apiStatus, setApiStatus] = useState<'idle' | 'calling' | 'success' | 'fallback'>('idle');
+  
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initialize with welcome message
   useEffect(() => {
-    ragSystem.initialize(initialKnowledge).catch(console.error);
-
-    const welcome = "Hello! 👋 I'm Portfolio AI, Yash's AI assistant. I can help you learn about his projects, skills, education, and experience. What would you like to know?";
-    addMessage({ role: 'assistant', content: welcome, source: 'welcome' });
-    if (!isMuted) aiAssistant.speak(welcome);
-
-    if (initialQuery) handleSendMessage(initialQuery);
+    const welcome = "Hello! 👋 I'm Portfolio AI, Yash's virtual assistant. Ask me about his projects, skills, or experience!";
+    addMessage('assistant', welcome, 'pattern');
+    if (!globalMute) speechController.speak(welcome);
   }, []);
 
+  // Auto-scroll on new messages
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const addMessage = (msg: Omit<Message, 'id' | 'timestamp'>) => {
+  // ============ HANDLERS ============
+  
+  // Handle back button - STOP SPEECH IMMEDIATELY
+  const handleBack = () => {
+    speechController.stop();
+    onBack();
+  };
+
+  // Add message helper
+  const addMessage = (role: 'user' | 'assistant', content: string, source?: AIResponse['source']) => {
     setMessages(prev => [...prev, {
-      id: Math.random().toString(36).substring(7),
-      timestamp: new Date(),
-      ...msg
+      id: Math.random().toString(36).slice(2),
+      role,
+      content,
+      source,
+      isMuted: false
     }]);
   };
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  // Toggle mute for specific message
+  const toggleMessageMute = (id: string) => {
+    const msg = messages.find(m => m.id === id);
+    if (!msg) return;
+
+    if (msg.isMuted) {
+      // Unmuting - speak the message
+      if (!globalMute) {
+        speechController.speak(msg.content);
+      }
+    } else {
+      // Muting - stop speech
+      speechController.stop();
+    }
+
+    setMessages(prev => prev.map(m => 
+      m.id === id ? { ...m, isMuted: !m.isMuted } : m
+    ));
+  };
+
+  // Send message
+  const handleSend = async (text: string) => {
+    if (!text.trim() || isTyping) return;
     
-    addMessage({ role: 'user', content });
-    setInputValue('');
+    addMessage('user', text);
+    setInput('');
     setIsTyping(true);
     setApiStatus('calling');
 
     try {
-      const history: ChatMessage[] = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
-
-      const response = await aiAssistant.generateResponse(content, history);
+      const response = await generateResponse(text);
+      
+      setApiStatus(response.source === 'api' ? 'success' : 'fallback');
+      setTimeout(() => setApiStatus('idle'), 3000);
       
       setIsTyping(false);
+      addMessage('assistant', response.text, response.source);
       
-      // Update API status based on response source
-      if (response.source === 'huggingface-api' || response.source === 'api') {
-        setApiStatus('success');
-      } else {
-        setApiStatus('fallback');
-      }
-      
-      // Reset status after 2 seconds
-      setTimeout(() => setApiStatus('idle'), 2000);
-      
-      addMessage({ 
-        role: 'assistant', 
-        content: response.text,
-        source: response.source 
-      });
-      
-      if (!isMuted) aiAssistant.speak(response.text);
-      
-      // Handle different action types
-      if (response.action) {
-        if (response.action.type === 'OPEN_PROJECT') {
-          const pid = response.action.payload.projectId;
-          if (PROJECT_DATA[pid]) {
-            setShowProjectsPanel(false);
-            setActiveProject(pid);
-          }
-        } else if (response.action.type === 'SHOW_PROJECTS_PANEL') {
-          setActiveProject(null);
-          setShowProjectsPanel(true);
-        }
+      // Speak if not globally muted
+      if (!globalMute) {
+        speechController.speak(response.text);
       }
 
-    } catch (error) {
-      console.error(error);
+      // Handle actions
+      if (response.action?.type === 'SHOW_PROJECTS') {
+        setShowProjects(true);
+      }
+    } catch (err) {
       setIsTyping(false);
       setApiStatus('fallback');
-      setTimeout(() => setApiStatus('idle'), 2000);
-      addMessage({ 
-        role: 'assistant', 
-        content: "Sorry, I encountered an error. Please try again!",
-        source: 'error'
-      });
+      addMessage('assistant', "Sorry, something went wrong. Try again!", 'fallback');
     }
   };
 
-  const handleMicClick = () => {
-    aiAssistant.startListening((text) => {
-      setInputValue(text);
-      handleSendMessage(text);
+  // Voice input
+  const handleMic = () => {
+    speechController.listen((text) => {
+      setInput(text);
+      handleSend(text);
     });
   };
 
+  // Project hover - show thumbnail and speak
+  const handleProjectHover = (projectId: ProjectId | null) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+
+    if (projectId) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setHoveredProject(projectId);
+        if (!globalMute) {
+          const project = PROJECTS[projectId];
+          speechController.speak(project.aiSummary);
+        }
+      }, 300);
+    } else {
+      setHoveredProject(null);
+      speechController.stop();
+    }
+  };
+
+  // Projects quick action
+  const handleProjectsClick = () => {
+    setShowProjects(true);
+    const text = `Yash has built ${Object.keys(PROJECTS).length} impressive projects! Hover over any project to see a preview and hear about it.`;
+    addMessage('assistant', text, 'pattern');
+    if (!globalMute) speechController.speak(text);
+  };
+
+  // Quick actions
   const quickActions = [
-    {
-      icon: User,
-      label: 'About Me',
-      action: () => handleSendMessage('Tell me about yourself')
-    },
-    {
-      icon: Briefcase,
-      label: 'Projects',
-      action: () => setShowProjectsPanel(true)
-    },
-    {
-      icon: GraduationCap,
-      label: 'Skills',
-      action: () => handleSendMessage('What are your technical skills?')
-    },
-    {
-      icon: Mail,
-      label: 'Contact',
-      action: () => handleSendMessage('How can I contact you?')
-    },
-    {
-      icon: FileText,
-      label: 'Resume',
-      action: () => window.open('/Yash Shah Resume.pdf', '_blank')
-    },
+    { icon: User, label: 'About', action: () => handleSend('Tell me about Yash') },
+    { icon: Briefcase, label: 'Projects', action: handleProjectsClick },
+    { icon: GraduationCap, label: 'Skills', action: () => handleSend('What are your skills?') },
+    { icon: Mail, label: 'Contact', action: () => handleSend('How can I contact you?') },
+    { icon: FileText, label: 'Resume', action: () => window.open('/Yash Shah Resume.pdf', '_blank') },
   ];
 
-  const previewProject = hoveredProject || Object.keys(PROJECT_DATA)[0];
-
+  // ============ RENDER ============
   return (
-    <div className="flex h-screen max-h-screen bg-white/80 backdrop-blur-sm overflow-hidden relative">
+    <div className="relative flex h-screen overflow-hidden">
+      {/* Fluid Background - FADED for chat */}
+      <FluidBackground faded={true} />
       
       {/* Main Chat Area */}
-      <div className={`flex flex-col h-full transition-all duration-500 ${(activeProject || showProjectsPanel) ? 'w-full md:w-1/2' : 'w-full'}`}>
+      <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${showProjects ? 'w-full md:w-1/2' : 'w-full'}`}>
         
-        {/* Header */}
-        <header className="flex-none flex items-center justify-between px-6 py-4 bg-white/90 border-b z-20">
+        {/* Header - Semi-transparent */}
+        <header className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-200/50">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={handleBack} className="hover:bg-gray-100/50">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                <AvatarImage src="/placeholder-avatar.jpg" />
-                <AvatarFallback className="bg-gray-900 text-white">YS</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="font-bold text-sm">Yash Shah</h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-green-600 flex items-center gap-1">● AI Online</p>
-                  {apiStatus === 'calling' && (
-                    <span className="text-xs text-blue-600 flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      API
-                    </span>
-                  )}
-                  {apiStatus === 'success' && (
-                    <span className="text-xs text-green-600">✓ API</span>
-                  )}
-                  {apiStatus === 'fallback' && (
-                    <span className="text-xs text-orange-600">⚠ Fallback</span>
-                  )}
-                </div>
+            <Avatar className="w-9 h-9">
+              <AvatarFallback className="bg-gray-900 text-white text-sm">YS</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="font-semibold text-sm">Yash Shah</h1>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-green-600">● Online</span>
+                {apiStatus === 'calling' && (
+                  <span className="text-blue-600 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> API
+                  </span>
+                )}
+                {apiStatus === 'success' && <span className="text-green-600">✓ API</span>}
+                {apiStatus === 'fallback' && <span className="text-orange-500">⚠ Local</span>}
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          
+          {/* Global mute toggle */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              if (!globalMute) speechController.stop();
+              setGlobalMute(!globalMute);
+            }}
+            className="hover:bg-gray-100/50"
+          >
+            {globalMute ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </Button>
         </header>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
-          <div className="max-w-3xl mx-auto space-y-6">
+        {/* Messages - Semi-transparent background */}
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50/30 backdrop-blur-[2px]">
+          <div className="max-w-2xl mx-auto space-y-4">
             {messages.map((msg) => (
-              <motion.div 
-                key={msg.id} 
-                initial={{ opacity: 0, y: 10 }} 
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-start w-full"
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="flex gap-3 max-w-[90%]">
-                  {msg.role === 'assistant' && (
-                    <Avatar className="w-8 h-8 mt-1 hidden md:block">
-                      <AvatarFallback className="bg-gray-900 text-white text-xs">AI</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className={`p-4 rounded-2xl shadow-sm ${
+                <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-2' : ''}`}>
+                  <div className={`p-3 rounded-2xl ${
                     msg.role === 'user' 
-                      ? 'bg-gray-900 text-white ml-auto' 
-                      : 'bg-white border border-gray-200'
+                      ? 'bg-gray-900 text-white' 
+                      : 'bg-white/90 backdrop-blur-sm border border-gray-200/50 shadow-sm'
                   }`}>
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                    {msg.source && msg.role === 'assistant' && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        {msg.source === 'huggingface-api' || msg.source === 'api' ? '🤖 AI Generated' : 
-                         msg.source === 'fallback' ? '📚 Knowledge Base' : 
-                         msg.source === 'conversational' ? '💬 Quick Reply' : ''}
-                      </p>
-                    )}
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   </div>
+                  
+                  {/* Per-message controls (only for assistant) */}
+                  {msg.role === 'assistant' && (
+                    <div className="flex items-center gap-2 mt-1 px-1">
+                      {/* Mute/Speak toggle button */}
+                      <button
+                        onClick={() => toggleMessageMute(msg.id)}
+                        className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors ${
+                          msg.isMuted 
+                            ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100' 
+                            : 'text-blue-500 hover:text-blue-700 hover:bg-blue-50'
+                        }`}
+                        title={msg.isMuted ? 'Click to hear this message' : 'Click to stop/mute'}
+                      >
+                        {msg.isMuted ? (
+                          <><VolumeX className="w-3 h-3" /> Muted</>
+                        ) : (
+                          <><Volume2 className="w-3 h-3" /> Speak</>
+                        )}
+                      </button>
+                      
+                      {/* Source indicator */}
+                      <span className="text-xs text-gray-400">
+                        {msg.source === 'api' && '🤖 AI'}
+                        {msg.source === 'fallback' && '📚 Local'}
+                        {msg.source === 'pattern' && '💬 Quick'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}
 
-            {/* Typing Indicator */}
+            {/* Typing indicator */}
             {isTyping && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }}
-                className="flex gap-3"
-              >
-                <Avatar className="w-8 h-8 hidden md:block">
-                  <AvatarFallback className="bg-gray-900 text-white text-xs">AI</AvatarFallback>
-                </Avatar>
-                <div className="bg-white border border-gray-200 p-4 rounded-2xl shadow-sm">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+                <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 p-3 rounded-2xl shadow-sm">
                   <div className="flex gap-1">
-                    <motion.div 
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                      animate={{ y: [0, -8, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                    />
-                    <motion.div 
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                      animate={{ y: [0, -8, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                    />
-                    <motion.div 
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                      animate={{ y: [0, -8, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                    />
+                    {[0, 1, 2].map(i => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 bg-gray-400 rounded-full"
+                        animate={{ y: [0, -6, 0] }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.15 }}
+                      />
+                    ))}
                   </div>
                 </div>
               </motion.div>
@@ -314,158 +294,163 @@ export default function ChatInterface({ initialQuery, onBack }: ChatInterfacePro
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex-none px-4 py-2 bg-white/90 border-t">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-3xl mx-auto">
-            {quickActions.map((action, idx) => (
-              <Button
-                key={idx}
-                variant="outline"
-                size="sm"
-                onClick={action.action}
-                className="flex items-center gap-2 whitespace-nowrap"
+        {/* Quick Actions - Semi-transparent */}
+        <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
+          <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto">
+            {quickActions.map((action, i) => (
+              <Button 
+                key={i} 
+                variant="outline" 
+                size="sm" 
+                onClick={action.action} 
+                className="whitespace-nowrap bg-white/50 hover:bg-white/80"
               >
-                <action.icon className="w-4 h-4" />
+                <action.icon className="w-4 h-4 mr-1" />
                 {action.label}
               </Button>
             ))}
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="flex-none p-4 bg-white/90 border-t">
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }}
-            className="max-w-3xl mx-auto flex gap-2"
-          >
+        {/* Input - Semi-transparent */}
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
+          <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="max-w-2xl mx-auto flex gap-2">
             <input
               type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask about projects, skills, or experience..."
-              className="flex-1 px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about projects, skills, experience..."
+              className="flex-1 px-4 py-2 rounded-full border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
               disabled={isTyping}
             />
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              onClick={handleMicClick}
-              className="rounded-full"
-              disabled={isTyping}
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="icon" 
+              onClick={handleMic} 
+              disabled={isTyping} 
+              className="rounded-full bg-white/50 hover:bg-white/80"
             >
-              <Mic className="w-5 h-5" />
+              <Mic className="w-4 h-4" />
             </Button>
-            <Button
-              type="submit"
-              size="icon"
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={isTyping || !input.trim()} 
               className="rounded-full bg-gray-900 hover:bg-gray-800"
-              disabled={isTyping || !inputValue.trim()}
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </form>
         </div>
       </div>
 
-      {/* Projects Panel */}
+      {/* Projects Side Panel */}
       <AnimatePresence>
-        {showProjectsPanel && (
+        {showProjects && (
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25 }}
-            className="fixed md:relative right-0 top-0 h-full w-full md:w-1/2 bg-white border-l shadow-2xl z-30 overflow-y-auto"
+            className="fixed md:relative right-0 top-0 h-full w-full md:w-1/2 bg-white/95 backdrop-blur-md border-l border-gray-200/50 shadow-xl z-30 overflow-hidden"
           >
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-xl font-bold">Projects & Experience</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowProjectsPanel(false)}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {Object.entries(PROJECT_DATA).map(([id, project]) => (
-                <motion.div
-                  key={id}
-                  whileHover={{ scale: 1.02 }}
-                  onMouseEnter={() => setHoveredProject(id)}
-                  onMouseLeave={() => setHoveredProject(null)}
-                  onClick={() => {
-                    setActiveProject(id);
-                    setShowProjectsPanel(false);
-                  }}
-                  className="p-4 border rounded-lg cursor-pointer hover:shadow-lg transition-all"
-                >
-                  <h3 className="font-bold text-lg mb-2">{project.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{project.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.map((tag, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-gray-100 text-xs rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Active Project Detail */}
-      <AnimatePresence>
-        {activeProject && PROJECT_DATA[activeProject] && (
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25 }}
-            className="fixed md:relative right-0 top-0 h-full w-full md:w-1/2 bg-white border-l shadow-2xl z-30 overflow-y-auto"
-          >
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-xl font-bold">{PROJECT_DATA[activeProject].title}</h2>
-              <Button variant="ghost" size="icon" onClick={() => setActiveProject(null)}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                <ReactPlayer
-                  url={PROJECT_DATA[activeProject].videoUrl}
-                  width="100%"
-                  height="100%"
-                  controls
-                />
-              </div>
-
-              <div>
-                <h3 className="font-bold text-lg mb-2">Description</h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {PROJECT_DATA[activeProject].fullDescription || PROJECT_DATA[activeProject].description}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="font-bold text-lg mb-2">Technologies</h3>
-                <div className="flex flex-wrap gap-2">
-                  {PROJECT_DATA[activeProject].tags.map((tag, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-gray-900 text-white text-sm rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                onClick={() => window.open(PROJECT_DATA[activeProject].repoUrl, '_blank')}
-                className="w-full flex items-center justify-center gap-2"
+            {/* Panel Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200/50 bg-gray-50/80">
+              <h2 className="font-bold text-lg">Projects & Experience</h2>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  setShowProjects(false);
+                  setHoveredProject(null);
+                  speechController.stop();
+                }}
               >
-                <Github className="w-5 h-5" />
-                View on GitHub
+                <X className="w-5 h-5" />
               </Button>
+            </div>
+
+            {/* Projects List */}
+            <div className="h-[calc(100%-60px)] overflow-y-auto p-4">
+              <div className="space-y-3">
+                {Object.entries(PROJECTS).map(([id, project]) => (
+                  <div
+                    key={id}
+                    className="relative"
+                    onMouseEnter={() => handleProjectHover(id as ProjectId)}
+                    onMouseLeave={() => handleProjectHover(null)}
+                  >
+                    {/* Project Card */}
+                    <div className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
+                      hoveredProject === id ? 'border-gray-900 shadow-md' : 'hover:border-gray-400'
+                    }`}>
+                      <h3 className="font-semibold">{project.title}</h3>
+                      <p className="text-sm text-gray-500">{project.subtitle}</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {project.tags.slice(0, 3).map((tag, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-gray-100 text-xs rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Hover Preview Tooltip */}
+                    <AnimatePresence>
+                      {hoveredProject === id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          className="absolute left-0 right-0 mt-2 p-4 bg-white border rounded-xl shadow-2xl z-50"
+                        >
+                          {/* Video Thumbnail */}
+                          <div className="aspect-video bg-gray-900 rounded-lg mb-3 overflow-hidden relative">
+                            <iframe
+                              src={`${project.videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1`}
+                              className="w-full h-full"
+                              allow="autoplay"
+                              title={project.title}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-sm text-gray-700 mb-3">{project.description}</p>
+
+                          {/* AI Summary */}
+                          <div className="p-2 bg-gray-50 rounded-lg mb-3">
+                            <p className="text-xs text-gray-600 flex items-start gap-2">
+                              <span className="text-lg">🤖</span>
+                              <span>{project.aiSummary}</span>
+                            </p>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(project.repoUrl, '_blank')}
+                              className="flex-1"
+                            >
+                              <Github className="w-4 h-4 mr-1" /> GitHub
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => window.open(project.videoUrl, '_blank')}
+                              className="flex-1"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" /> Demo
+                            </Button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
