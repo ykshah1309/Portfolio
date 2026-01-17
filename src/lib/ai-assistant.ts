@@ -420,10 +420,32 @@ function cosineSim(a: number[], b: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
 }
 
-function searchKnowledge(query: string, topK = 3): KnowledgeChunk[] {
+function searchKnowledge(query: string, topK = 5): KnowledgeChunk[] {
   const qEmb = createEmbedding(query);
+  const q = query.toLowerCase();
+  
   return knowledgeBase
-    .map(chunk => ({ chunk, score: cosineSim(qEmb, chunk.embedding) }))
+    .map(chunk => {
+      let score = cosineSim(qEmb, chunk.embedding);
+      
+      // Keyword boost for critical terms
+      const text = chunk.text.toLowerCase();
+      const tags = chunk.metadata.tags?.map(t => t.toLowerCase()) || [];
+      
+      const keywords = q.split(/[^\w]+/);
+      keywords.forEach(word => {
+        if (word.length < 3) return;
+        if (text.includes(word)) score += 0.1;
+        if (tags.includes(word)) score += 0.15;
+      });
+
+      // Specific boost for education queries
+      if ((q.includes('master') || q.includes('ms')) && chunk.id === 'edu-njit-masters') score += 0.5;
+      if ((q.includes('bachelor') || q.includes('be') || q.includes('undergrad')) && chunk.id === 'edu-mumbai-bachelors') score += 0.5;
+      if (q.includes('education') && (chunk.id.includes('edu-'))) score += 0.3;
+      
+      return { chunk, score };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)
     .map(x => x.chunk);

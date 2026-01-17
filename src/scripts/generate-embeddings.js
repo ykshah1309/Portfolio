@@ -44,7 +44,7 @@ function createSimpleEmbedding(text, metadata = {}) {
   return embedding.map(val => val / norm);
 }
 
-// Enhanced knowledge base with Yash's actual information from provided data
+// Comprehensive knowledge base with Yash's actual information from personaldata.docx
 const knowledgeBase = [
   {
     id: 'assistant-info',
@@ -74,48 +74,48 @@ const knowledgeBase = [
     }
   },
   {
-    id: 'edu-njit',
-    text: "Yash earned his Master of Science in Data Science (Computational Track) from New Jersey Institute of Technology (NJIT) between August 2024 and December 2025. He maintained a high GPA of 3.8/4.0. His coursework included Machine Learning, Deep Learning, AI, Cloud Computing, Big Data, Applied Statistics, Corporate Finance Management, Web Systems, and Python & Mathematics.",
+    id: 'edu-njit-masters',
+    text: "Yash earned his Master of Science in Data Science (Computational Track) from New Jersey Institute of Technology (NJIT), Ying Wu College of Computing (YWCC), between September 2024 and December 2025. He maintained a high GPA of 3.8/4.0. His coursework included Machine Learning, Deep Learning, AI, Cloud Computing, Big Data, Applied Statistics, Corporate Finance Management, Web Systems, and Python & Mathematics.",
     metadata: { 
       type: 'education', 
-      title: 'NJIT Education',
-      tags: ['education', 'njit', 'masters', 'data science', 'gpa', 'coursework', 'graduate']
+      title: 'NJIT MS Data Science',
+      tags: ['education', 'njit', 'masters', 'ms', 'data science', 'gpa', 'coursework', 'graduate', 'ywcc']
     }
   },
   {
-    id: 'edu-mumbai',
-    text: "Yash holds a Bachelor of Technology in Computer Science from Mumbai University - D.J. Sanghvi College of Engineering (December 2020 - July 2024). He also completed a minor in Data Science during his time there in Mumbai, India.",
+    id: 'edu-mumbai-bachelors',
+    text: "Yash holds a Bachelor of Engineering (BE) in Computer Engineering from Mumbai University - SVKM’s Dwarkadas J. Sanghvi College of Engineering (2020 - 2024). He also completed a Minor in Data Science during his undergraduate studies in Mumbai, India.",
     metadata: { 
       type: 'education', 
-      title: 'Mumbai University Education',
-      tags: ['education', 'mumbai', 'btech', 'computer science', 'undergraduate', 'sanghvi']
+      title: 'Mumbai University BE Computer Engineering',
+      tags: ['education', 'mumbai', 'be', 'bachelors', 'computer engineering', 'undergraduate', 'sanghvi', 'dj sanghvi']
     }
   },
   {
     id: 'exp-yogosocial',
-    text: "Yash worked as a Full-Stack Engineer at YogoSocial (Agenticue) for his NJIT Capstone from September to December 2025. He engineered a serverless analytics pipeline using AWS Lambda & DynamoDB handling 10K+ concurrent events with sub-second latency. He developed REST APIs in TypeScript with sub-200ms response times and implemented GDPR/CCPA-compliant security features.",
+    text: "Yash worked as a Backend Engineer at YogoSocial (Agenticue) for his NJIT Capstone from September to December 2025. He engineered a serverless analytics pipeline using AWS Lambda & DynamoDB handling 10K+ concurrent events with sub-second latency. He developed REST APIs in TypeScript with sub-200ms response times and implemented GDPR/CCPA-compliant security features like cascading account deletion.",
     metadata: { 
       type: 'experience', 
-      title: 'YogoSocial Experience',
-      tags: ['experience', 'yogosocial', 'agenticue', 'aws', 'lambda', 'dynamodb', 'typescript', 'api', 'capstone']
+      title: 'YogoSocial Backend Engineer',
+      tags: ['experience', 'yogosocial', 'agenticue', 'aws', 'lambda', 'dynamodb', 'typescript', 'api', 'capstone', 'backend']
     }
   },
   {
-    id: 'exp-mixr',
-    text: "As a Research Assistant at NJIT MiXR Lab (Sept - Dec 2024), Yash worked on Forensic VR Detective Training. He developed a data analysis pipeline that processed 25+ user surveys with 40+ variables, identifying key correlations like -0.43 fatigue-comfort. His work reduced manual analysis time by 80%.",
+    id: 'exp-mixr-lab',
+    text: "As a Research Assistant at NJIT MiXR Lab (Sept - Dec 2024), Yash designed an end-to-end data analysis pipeline for Forensic VR Detective Training. He processed 25+ user surveys with 40+ variables, identifying key correlations like -0.43 fatigue-comfort. His work reduced manual analysis time by 80% and enabled trainer optimization of scenario difficulty.",
     metadata: { 
       type: 'experience', 
-      title: 'MiXR Lab Research',
-      tags: ['experience', 'research', 'njit', 'mixr', 'vr', 'data analysis', 'python']
+      title: 'MiXR Lab Research Assistant',
+      tags: ['experience', 'research', 'njit', 'mixr', 'vr', 'data analysis', 'python', 'forensic']
     }
   },
   {
     id: 'exp-devashish',
-    text: "At Dev Ashish Steels (May 2023 - April 2024), Yash served as a Data Scientist / Business Analyst. He developed interactive Power BI dashboards for sales performance and market rates, streamlined bill management, and optimized supply chain tracking methodologies.",
+    text: "At Dev Ashish Steels (May 2023 - April 2024), Yash served as a Data Scientist / Business Analyst. He developed interactive Power BI dashboards for sales performance and market rates, streamlined bill management, and optimized supply chain tracking methodologies for metal trading transactions.",
     metadata: { 
       type: 'experience', 
-      title: 'Dev Ashish Steels',
-      tags: ['experience', 'dev ashish steels', 'power bi', 'business analyst', 'data scientist', 'supply chain']
+      title: 'Dev Ashish Steels Data Scientist',
+      tags: ['experience', 'dev ashish steels', 'power bi', 'business analyst', 'data scientist', 'supply chain', 'metal trading']
     }
   },
   {
@@ -123,17 +123,17 @@ const knowledgeBase = [
     text: "During his AI/ML Internship at Verzeo (April - Sept 2022), Yash developed ROI forecasting pipelines using Linear/Ridge/Lasso regression on 500K+ transactions with 85% accuracy. He also optimized sentiment analysis using PCA + TF-IDF, improving F1-scores by 10%.",
     metadata: { 
       type: 'experience', 
-      title: 'Verzeo Internship',
-      tags: ['experience', 'verzeo', 'internship', 'ml', 'regression', 'sentiment analysis']
+      title: 'Verzeo AI/ML Internship',
+      tags: ['experience', 'verzeo', 'internship', 'ml', 'regression', 'sentiment analysis', 'pca']
     }
   },
   {
     id: 'proj-creb-ai',
-    text: "CREB-AI is a production-level Commercial Real Estate platform inspired by Tinder-like matching. It features an AI matching algorithm, a RAG chatbot for lease negotiations, real-time messaging, and admin dashboards with Chart.js. Built with Next.js, TypeScript, Chakra UI, and PostgreSQL via Supabase.",
+    text: "CREB-AI is a production-level Commercial Real Estate platform inspired by Tinder-like matching. It features an AI matching algorithm, a RAG chatbot for lease negotiations, real-time messaging, and admin dashboards with Chart.js. Built with Next.js, TypeScript, Chakra UI, and PostgreSQL via Supabase. It includes NYC-compliant e-signature workflows.",
     metadata: { 
       type: 'project', 
       title: 'CREB-AI',
-      tags: ['project', 'creb-ai', 'real estate', 'matching', 'rag', 'chatbot', 'nextjs', 'supabase']
+      tags: ['project', 'creb-ai', 'real estate', 'matching', 'rag', 'chatbot', 'nextjs', 'supabase', 'nyc']
     }
   },
   {
@@ -142,52 +142,61 @@ const knowledgeBase = [
     metadata: { 
       type: 'project', 
       title: 'Rose',
-      tags: ['project', 'rose', 'voice assistant', 'offline', 'privacy', 'llm', 'vosk', 'python']
+      tags: ['project', 'rose', 'voice assistant', 'offline', 'privacy', 'llm', 'vosk', 'python', 'windows']
     }
   },
   {
     id: 'proj-pandora',
-    text: "Pandora's Box is a Conversational Health AI with a 99.4% safety filtering rate for medical queries. It features multi-persona AI 'goddesses', emotion-aware responses, and menstrual cycle tracking. Built with Next.js, TypeScript, Tailwind CSS, and Framer Motion.",
+    text: "Pandora's Box is a Conversational Health AI with a 99.4% safety filtering rate for medical queries. It features multi-persona AI 'goddesses', emotion-aware responses, and menstrual cycle tracking. Built with Next.js, TypeScript, Tailwind CSS, and Framer Motion. It was tested on 5,000+ simulated conversations.",
     metadata: { 
       type: 'project', 
       title: "Pandora's Box",
-      tags: ['project', 'pandora', 'health ai', 'safety', 'filtering', 'nextjs', 'typescript']
+      tags: ['project', 'pandora', 'health ai', 'safety', 'filtering', 'nextjs', 'typescript', 'framer motion']
     }
   },
   {
     id: 'proj-reputeflow',
-    text: "ReputeFlow is a reputation management tool built with a plugin-based modular Python system. It features real-time dashboards using Streamlit and Plotly for data visualization and end-to-end reputation monitoring automation.",
+    text: "ReputeFlow is a reputation management tool built with a plugin-based modular Python system. It features real-time dashboards using Streamlit and Plotly for data visualization and end-to-end reputation monitoring automation. It supports plug-and-play data ingestion modules.",
     metadata: { 
       type: 'project', 
       title: 'ReputeFlow',
-      tags: ['project', 'reputeflow', 'reputation', 'python', 'streamlit', 'plotly']
+      tags: ['project', 'reputeflow', 'reputation', 'python', 'streamlit', 'plotly', 'automation']
     }
   },
   {
-    id: 'skills-summary',
-    text: "Yash's technical skills include: Python (Expert), TypeScript (Advanced), JavaScript, SQL, and PHP. AI/ML: TensorFlow, PyTorch, RAG, LLM fine-tuning, MLOps. Cloud: AWS (Lambda, S3, DynamoDB, RDS, Amplify), GCP (BigQuery, Vertex AI). Frontend: React, Next.js, Vue.js, Tailwind CSS. Data: Tableau, Power BI, Pandas, NumPy.",
+    id: 'skills-programming',
+    text: "Yash's programming skills include: Python (Expert in Pandas, NumPy, Scikit-learn, FastAPI, Streamlit), TypeScript (Advanced in Next.js, React, Node.js), JavaScript (Proficient in Vue.js), SQL (Advanced in Optimization and complex queries), PHP (Laravel), and C++.",
     metadata: { 
       type: 'skill', 
-      title: 'Technical Skills Catalog',
-      tags: ['skills', 'python', 'typescript', 'aws', 'ml', 'ai', 'react', 'nextjs', 'sql']
+      title: 'Programming Languages',
+      tags: ['skills', 'python', 'typescript', 'javascript', 'sql', 'php', 'c++']
     }
   },
   {
-    id: 'achievements',
-    text: "Yash's achievements include an IEEE Conference Paper on 'Automated Facial Expression Generation' (2023) and research on 'Portfolio Optimization Using Quantum Computing' (2024). He holds certifications from IBM (Machine Learning) and HackerRank (Advanced SQL).",
+    id: 'skills-ai-ml',
+    text: "Yash specializes in AI/ML: TensorFlow, PyTorch, RAG architecture, LLM fine-tuning, Prompt Engineering, NLP (Sentiment/Context analysis), Computer Vision, and MLOps (Production deployment and monitoring).",
+    metadata: { 
+      type: 'skill', 
+      title: 'AI/ML Specialization',
+      tags: ['skills', 'ai', 'ml', 'tensorflow', 'pytorch', 'rag', 'llm', 'nlp', 'mlops']
+    }
+  },
+  {
+    id: 'skills-cloud-data',
+    text: "Yash's cloud and data skills include: AWS (Lambda, S3, DynamoDB, RDS, Amplify, API Gateway, IAM, CloudWatch), GCP (BigQuery, Vertex AI), Docker, CI/CD (Jenkins, GitHub Actions), Tableau, Power BI, and Vector Databases (Pinecone, Milvus).",
+    metadata: { 
+      type: 'skill', 
+      title: 'Cloud & Data Tools',
+      tags: ['skills', 'aws', 'gcp', 'docker', 'cicd', 'tableau', 'powerbi', 'vector database']
+    }
+  },
+  {
+    id: 'achievements-certs',
+    text: "Yash's achievements include an IEEE Conference Paper on 'Automated Facial Expression Generation' (2023) and research on 'Portfolio Optimization Using Quantum Computing' (2024). He holds certifications: IBM Machine Learning with Python (2022) and HackerRank SQL Advanced (2025).",
     metadata: { 
       type: 'personal', 
       title: 'Certifications & Publications',
-      tags: ['achievements', 'ieee', 'publication', 'quantum computing', 'ibm', 'sql']
-    }
-  },
-  {
-    id: 'hydration-error-fix',
-    text: "Yash is aware of React hydration errors in Next.js. These often occur when server-rendered HTML doesn't match client properties, such as using Date.now(), Math.random(), or user-specific locale formatting in Client Components without proper handling. He knows how to fix these by using useEffect for client-only logic or ensuring consistent data between server and client.",
-    metadata: {
-      type: 'skill',
-      title: 'Next.js Hydration Fixes',
-      tags: ['nextjs', 'react', 'hydration', 'error', 'ssr', 'client component']
+      tags: ['achievements', 'ieee', 'publication', 'quantum computing', 'ibm', 'sql', 'hackerrank']
     }
   }
 ];
