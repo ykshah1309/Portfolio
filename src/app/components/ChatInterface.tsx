@@ -185,12 +185,12 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
   // ============ RENDER ============
   return (
-    <div className="relative flex h-screen overflow-hidden">
+    <div className="relative flex h-screen overflow-hidden fixed inset-0">
       {/* Fluid Background - FADED for chat */}
       <FluidBackground faded={true} />
       
       {/* Main Chat Area */}
-      <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${showProjects ? 'w-full md:w-1/2' : 'w-full'}`}>
+      <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${showProjects ? 'hidden md:flex md:w-1/2' : 'w-full'}`}>
         
         {/* Header - Semi-transparent */}
         <header className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-200/50">
@@ -306,7 +306,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
         {/* Quick Actions - Semi-transparent */}
         <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
-          <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto">
+            <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto no-scrollbar">
             {quickActions.map((action, i) => (
               <Button 
                 key={i} 
@@ -367,7 +367,17 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
           >
             {/* Panel Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200/50 bg-gray-50/80">
+              <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden"
+                onClick={() => setShowProjects(false)}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
               <h2 className="font-bold text-lg">Projects & Experience</h2>
+            </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -392,9 +402,11 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                     onMouseLeave={() => handleProjectHover(null)}
                   >
                     {/* Project Card */}
-                    <div className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
-                      hoveredProject === id ? 'border-gray-900 shadow-md' : 'hover:border-gray-400'
-                    }`}>
+                    <div 
+                      onClick={() => setHoveredProject(hoveredProject === id ? null : id as ProjectId)}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
+	                      hoveredProject === id ? 'border-gray-900 shadow-md' : 'hover:border-gray-400'
+	                    }`}>
                       <h3 className="font-semibold">{project.title}</h3>
                       <p className="text-sm text-gray-500">{project.subtitle}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
@@ -413,7 +425,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                           initial={{ opacity: 0, scale: 0.95, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                          className="absolute left-0 right-0 mt-2 p-4 bg-white border rounded-xl shadow-2xl z-50"
+                          className="absolute left-0 right-0 mt-2 p-4 bg-white border rounded-xl shadow-2xl z-50 md:relative md:mt-4"
                         >
                           {/* Video Thumbnail */}
                           <div className="aspect-video bg-gray-900 rounded-lg mb-3 overflow-hidden relative">

@@ -219,7 +219,7 @@ export default function LinkedInPosts() {
 
   return (
     <div className="w-full max-w-5xl mx-auto my-16 px-4">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[#0077b5] rounded-xl">
             <Linkedin className="w-6 h-6 text-white" />
@@ -302,9 +302,7 @@ export default function LinkedInPosts() {
                   </Avatar>
                   <div>
                     <p className="font-bold text-gray-900">Yash Shah</p>
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full mt-1">
-                      <span className="text-[10px] font-semibold text-gray-600">Post to Anyone</span>
-                    </div>
+                    <p className="text-xs text-gray-500">Posting to Professional Updates</p>
                   </div>
                 </div>
                 <textarea
@@ -347,23 +345,23 @@ export default function LinkedInPosts() {
 
         <div 
           ref={scrollRef}
-          className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory no-scrollbar scroll-smooth"
+          className="flex gap-4 sm:gap-6 overflow-x-auto pb-8 snap-x snap-mandatory no-scrollbar scroll-smooth touch-pan-x"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {posts.map((post) => (
             <motion.div 
               key={post.id}
-              className="min-w-[320px] md:min-w-[450px] bg-white/40 backdrop-blur-md border border-white/20 rounded-[2rem] snap-center flex flex-col overflow-hidden"
+              className="min-w-[280px] xs:min-w-[320px] md:min-w-[450px] bg-white/40 backdrop-blur-md border border-white/20 rounded-[1.5rem] sm:rounded-[2rem] snap-center flex flex-col overflow-hidden"
             >
               {/* Post Header */}
               <div className="p-6 flex items-start justify-between">
                 <div className="flex gap-4">
-                  <Avatar className="w-14 h-14 border border-white shadow-sm">
+                  <Avatar className="w-10 h-10 sm:w-14 sm:h-14 border border-white shadow-sm">
                     <AvatarFallback className="bg-gray-900 text-white font-bold">YS</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-lg leading-tight">{post.author}</h4>
-                    <p className="text-[11px] text-gray-500 mt-1 font-medium line-clamp-1 max-w-[200px] md:max-w-[280px]">{post.role}</p>
+                    <h4 className="font-bold text-gray-900 text-base sm:text-lg leading-tight">{post.author}</h4>
+                    <p className="text-[10px] sm:text-[11px] text-gray-500 mt-1 font-medium line-clamp-1 max-w-[150px] xs:max-w-[200px] md:max-w-[280px]">{post.role}</p>
                     <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1.5">
                       <Clock className="w-3 h-3" />
                       <span>{post.timestamp}</span>
@@ -379,7 +377,7 @@ export default function LinkedInPosts() {
 
               {/* Post Content */}
               <div className="px-6 pb-6 flex-1">
-                <p className="text-[15px] text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <p className="text-sm sm:text-[15px] text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {post.content}
                 </p>
               </div>

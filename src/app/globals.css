@@ -19,4 +19,18 @@ body {
   margin: 0;
   padding: 0;
   font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Fix for mobile scroll issues */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure the main container can scroll if needed */
+main {
+  overflow-x: hidden;
 }
