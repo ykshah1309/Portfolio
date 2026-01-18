@@ -1,16 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Briefcase, GraduationCap, Mail, FileText, User } from 'lucide-react';
+import { Mic, Briefcase, GraduationCap, Mail, FileText, User, ChevronUp, ChevronDown } from 'lucide-react';
 import ChatInterface from './ChatInterface';
 import FluidBackground from './FluidBackground';
 import LinkedInPosts from './LinkedInPosts';
-import Image from 'next/image'; // Import next/image if using Next.js
 
 export default function LandingPage() {
   const [showChat, setShowChat] = useState(false);
   const [initialQuery, setInitialQuery] = useState('');
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      const isMobile = window.innerWidth < 768;
+      const hasScroll = document.documentElement.scrollHeight > window.innerHeight;
+      setShowScrollButtons(isMobile && hasScroll);
+    };
+
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    window.addEventListener('scroll', checkScroll);
+    return () => {
+      window.removeEventListener('resize', checkScroll);
+      window.removeEventListener('scroll', checkScroll);
+    };
+  }, []);
+
+  const scrollBy = (amount: number) => {
+    window.scrollBy({ top: amount, behavior: 'smooth' });
+  };
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,6 +59,33 @@ export default function LandingPage() {
     <>
       <FluidBackground />
       
+      {/* Vertical Scroll Buttons for Mobile */}
+      <AnimatePresence>
+        {showScrollButtons && !showChat && (
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="fixed right-4 bottom-24 z-[100] flex flex-col gap-3 md:hidden"
+          >
+            <button
+              onClick={() => scrollBy(-300)}
+              className="p-3 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg text-gray-800 active:scale-95 transition-all"
+              aria-label="Scroll Up"
+            >
+              <ChevronUp className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => scrollBy(300)}
+              className="p-3 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg text-gray-800 active:scale-95 transition-all"
+              aria-label="Scroll Down"
+            >
+              <ChevronDown className="w-6 h-6" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {!showChat ? (
           <motion.div
@@ -78,10 +125,22 @@ export default function LandingPage() {
                   {/* Gradient border */}
                   <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 p-1">
                     <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center shadow-2xl overflow-hidden border-4 border-white/90 backdrop-blur-sm">
-                      {/* Option 2: Fallback with initials */}
-                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center">
-                        <span className="text-4xl font-bold text-gray-800">YS</span>
-                      </div>
+                      {/* Profile Image - Replace '/profile.jpg' with your actual image path */}
+                      <img 
+                        src="/Profile_Pic.jpeg" // Change this to your image path
+                        alt="Yash Shah"
+                        className="w-full h-full object-cover rounded-full"
+                        onError={(e) => {
+                          // Fallback to initials if image fails to load
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = 'none';
+                          // Create fallback div with initials
+                          const fallbackDiv = document.createElement('div');
+                          fallbackDiv.className = 'w-full h-full bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center rounded-full';
+                          fallbackDiv.innerHTML = '<span class="text-4xl font-bold text-gray-800">YS</span>';
+                          target.parentNode?.appendChild(fallbackDiv);
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
