@@ -185,7 +185,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
   // ============ RENDER ============
   return (
-    <div className="relative flex h-screen overflow-hidden fixed inset-0">
+    <div className="fixed inset-0 z-50 flex h-screen overflow-hidden bg-transparent">
       {/* Fluid Background - FADED for chat */}
       <FluidBackground faded={true} />
       
@@ -285,7 +285,11 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
             {/* Typing indicator */}
             {isTyping && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-start"
+              >
                 <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 p-3 rounded-2xl shadow-sm">
                   <div className="flex gap-1">
                     {[0, 1, 2].map(i => (

@@ -10,19 +10,21 @@ interface FluidBackgroundProps {
 export default function FluidBackground({ faded = false }: FluidBackgroundProps) {
   useEffect(() => {
     // Initialize the fluid effect with your preferred config
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
     const cleanup = initFluid({
-      id: 'smokey-fluid-canvas', // This must match the canvas ID
-      simResolution: 256,
-      dyeResolution: 1024,
+      id: 'smokey-fluid-canvas',
+      simResolution: isMobile ? 128 : 256,
+      dyeResolution: isMobile ? 512 : 1024,
       densityDissipation: 0.98,
       velocityDissipation: 0.98,
-      pressureIteration: 20,
+      pressureIteration: isMobile ? 10 : 20,
       curl: 35,
       splatRadius: 0.25,
       splatForce: 6000,
       shading: true,
       colorUpdateSpeed: 10,
-      transparent: true, // Allows your page content to be visible
+      transparent: true,
     });
 
     // Cleanup function to destroy the effect on component unmount
@@ -41,6 +43,8 @@ export default function FluidBackground({ faded = false }: FluidBackgroundProps)
           display: 'block',
           width: '100vw',
           height: '100vh',
+          pointerEvents: 'none',
+          touchAction: 'none',
         }}
       />
     </div>
