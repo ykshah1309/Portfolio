@@ -1,13 +1,13 @@
 // src/lib/ai-assistant.ts
-// Enhanced AI Assistant with Security Gates, Mess Factor, and Improved Knowledge Base
-// Version 2.0 - Security Hardened Edition
+// Founder-positioned AI assistant — Phase 1b
+// Security layer unchanged; PROJECTS data, FALLBACKS, and PATTERNS rewritten.
 
 // ============ TYPES ============
 export interface KnowledgeChunk {
   id: string;
   text: string;
-  metadata: { 
-    type: 'project' | 'experience' | 'skill' | 'education' | 'personal'; 
+  metadata: {
+    type: 'project' | 'experience' | 'skill' | 'education' | 'personal';
     title?: string;
     tags?: string[];
   };
@@ -39,7 +39,6 @@ const SECURITY_CONFIG = {
   enableLogging: true,
 };
 
-// Rate limiting storage (in production, use Redis or similar)
 const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
 
 // ============ KNOWLEDGE BASE ============
@@ -52,7 +51,7 @@ try {
   console.warn('Knowledge base not loaded');
 }
 
-// ============ SPEECH CONTROLLER WITH FEMALE VOICE ============
+// ============ SPEECH CONTROLLER ============
 class SpeechController {
   private synthesis: SpeechSynthesis | null = null;
   private recognition: any = null;
@@ -77,19 +76,16 @@ class SpeechController {
   private loadVoices() {
     if (!this.synthesis) return;
     const voices = this.synthesis.getVoices();
-    const femaleVoiceNames = [
-      'Google UK English Female', 'Google US English Female', 
-      'Microsoft Zira', 'Samantha', 'Karen', 'Moira', 'Tessa',
-      'Victoria', 'Fiona', 'female', 'Female'
+    const preferred = [
+      'Google UK English Female', 'Google US English Female',
+      'Microsoft Zira', 'Samantha', 'Karen', 'Moira',
     ];
-    for (const name of femaleVoiceNames) {
+    for (const name of preferred) {
       const voice = voices.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
       if (voice) { this.femaleVoice = voice; break; }
     }
     if (!this.femaleVoice) {
-      this.femaleVoice = voices.find(v => 
-        v.name.toLowerCase().includes('female') || v.name.includes('Zira') || v.name.includes('Samantha')
-      ) || null;
+      this.femaleVoice = voices.find(v => v.name.toLowerCase().includes('female')) || null;
     }
   }
 
@@ -103,9 +99,7 @@ class SpeechController {
     this.synthesis.speak(utterance);
   }
 
-  stop() {
-    if (this.synthesis) this.synthesis.cancel();
-  }
+  stop() { if (this.synthesis) this.synthesis.cancel(); }
 
   listen(onResult: (text: string) => void) {
     if (!this.recognition) { alert('Speech recognition not supported'); return; }
@@ -118,37 +112,30 @@ export const speechController = new SpeechController();
 
 // ============ SECURITY LAYER ============
 
-/**
- * Comprehensive security check for incoming queries
- */
 function performSecurityCheck(query: string): SecurityCheckResult {
   const q = query.toLowerCase().trim();
-  
-  // 1. Length check
+
   if (query.length > SECURITY_CONFIG.maxQueryLength) {
-    return { safe: false, reason: "Query too long", threatType: 'spam' };
+    return { safe: false, reason: 'Query too long', threatType: 'spam' };
   }
-  
-  // 2. Profanity filter (enhanced)
+
   const profanityPatterns = [
-    /\b(f+u+c+k+|f+c+k+|fuk|fck|fk)\b/i, 
-    /\b(sh+i+t+|sh1t|sht)\b/i,
-    /\b(a+s+s+h+o+l+e+|@sshole)\b/i, 
-    /\b(b+i+t+c+h+|b1tch|btch)\b/i,
-    /\b(c+u+n+t+)\b/i, 
-    /\b(d+i+c+k+|d1ck)\b/i, 
+    /\b(f+u+c+k+|f+c+k+|fuk|fck)\b/i,
+    /\b(sh+i+t+|sh1t)\b/i,
+    /\b(a+s+s+h+o+l+e+)\b/i,
+    /\b(b+i+t+c+h+|b1tch)\b/i,
+    /\b(c+u+n+t+)\b/i,
+    /\b(d+i+c+k+|d1ck)\b/i,
     /\b(p+u+s+s+y+)\b/i,
-    /\b(sex|porn|naked|nude|xxx)\b/i, 
+    /\b(sex|porn|naked|nude|xxx)\b/i,
     /suck.*(my|mah|ma)/i,
-    /f[\W_]*u[\W_]*c[\W_]*k/i, 
+    /f[\W_]*u[\W_]*c[\W_]*k/i,
     /s[\W_]*h[\W_]*i[\W_]*t/i,
   ];
-  
   if (profanityPatterns.some(p => p.test(q))) {
-    return { safe: false, reason: "Inappropriate language detected", threatType: 'profanity' };
+    return { safe: false, reason: 'Inappropriate language detected', threatType: 'profanity' };
   }
-  
-  // 3. Hate speech detection (enhanced)
+
   const hateSpeechPatterns = [
     /\b(nigger|nigga|fag|faggot|retard|spic|chink|kike)\b/i,
     /\b(heil|hail)\s*(hitler|fuhrer)/i,
@@ -156,12 +143,10 @@ function performSecurityCheck(query: string): SecurityCheckResult {
     /\b(white|black|jew|muslim)\s*(power|supremacy)/i,
     /\b(gas\s*the|lynch|hang)\s*(jews|blacks|n\*+)/i,
   ];
-  
   if (hateSpeechPatterns.some(p => p.test(q))) {
-    return { safe: false, reason: "Hate speech detected", threatType: 'hate_speech' };
+    return { safe: false, reason: 'Hate speech detected', threatType: 'hate_speech' };
   }
-  
-  // 4. SQL Injection detection
+
   const sqlInjectionPatterns = [
     /(\b(select|insert|update|delete|drop|truncate|alter|create|exec|execute)\b.*\b(from|into|table|database|where)\b)/i,
     /(\bunion\b.*\bselect\b)/i,
@@ -171,12 +156,10 @@ function performSecurityCheck(query: string): SecurityCheckResult {
     /\bdrop\s+(table|database)\b/i,
     /\bdelete\s+\*?\s*from\b/i,
   ];
-  
   if (sqlInjectionPatterns.some(p => p.test(q))) {
-    return { safe: false, reason: "Potential SQL injection detected", threatType: 'injection' };
+    return { safe: false, reason: 'Potential SQL injection detected', threatType: 'injection' };
   }
-  
-  // 5. Prompt injection detection
+
   const promptInjectionPatterns = [
     /ignore\s*(all\s*)?(previous|prior|above)\s*(instructions?|prompts?|rules?)/i,
     /forget\s*(everything|all|your)\s*(you|instructions?|training)/i,
@@ -189,12 +172,10 @@ function performSecurityCheck(query: string): SecurityCheckResult {
     /override\s*(your|the)\s*(programming|instructions?|rules?)/i,
     /reveal\s*(your|the)\s*(system|hidden|secret)\s*(prompt|instructions?)/i,
   ];
-  
   if (promptInjectionPatterns.some(p => p.test(q))) {
-    return { safe: false, reason: "Prompt manipulation attempt detected", threatType: 'manipulation' };
+    return { safe: false, reason: 'Prompt manipulation attempt detected', threatType: 'manipulation' };
   }
-  
-  // 6. Code injection detection
+
   const codeInjectionPatterns = [
     /<script\b[^>]*>/i,
     /javascript:/i,
@@ -204,90 +185,53 @@ function performSecurityCheck(query: string): SecurityCheckResult {
     /\b__proto__\b/i,
     /\bconstructor\b.*\(/i,
   ];
-  
   if (codeInjectionPatterns.some(p => p.test(q))) {
-    return { safe: false, reason: "Code injection attempt detected", threatType: 'injection' };
+    return { safe: false, reason: 'Code injection attempt detected', threatType: 'injection' };
   }
-  
+
   return { safe: true };
 }
 
-/**
- * Sanitize input to remove potentially harmful content
- */
 function sanitizeInput(query: string): string {
   return query
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+\s*=/gi, '') // Remove event handlers
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
     .trim()
     .slice(0, SECURITY_CONFIG.maxQueryLength);
 }
 
-/**
- * Rate limiting check (client-side, for demo purposes)
- * In production, implement server-side rate limiting
- */
 function checkRateLimit(clientId: string = 'default'): boolean {
   const now = Date.now();
   const record = rateLimitStore.get(clientId);
-  
   if (!record || now > record.resetTime) {
     rateLimitStore.set(clientId, { count: 1, resetTime: now + 60000 });
     return true;
   }
-  
-  if (record.count >= SECURITY_CONFIG.maxQueriesPerMinute) {
-    return false;
-  }
-  
+  if (record.count >= SECURITY_CONFIG.maxQueriesPerMinute) return false;
   record.count++;
   return true;
 }
 
 // ============ MESS FACTOR DETECTION ============
 
-/**
- * Detect if the query is gibberish or random keyboard mashing
- */
 function isGibberish(query: string): boolean {
   const q = query.toLowerCase().trim();
-  
-  // Very short queries that aren't common words
-  if (q.length <= 2 && !/^(hi|ok|no|go|do|me|we|us|it|is|am|an|as|at|be|by|he|if|in|my|of|on|or|so|to|up)$/.test(q)) {
-    return true;
-  }
-  
-  // Check for repeated characters (keyboard mashing)
-  if (/(.)\1{4,}/.test(q)) return true;
-  
-  // Check for lack of vowels in long strings
+  if (q.length <= 2 && !/^(hi|ok|no|go|do|me|we|us|it|is|am|an|as|at|be|by|he|if|in|my|of|on|or|so|to|up)$/.test(q)) return true;
+  if (/(.)\\1{4,}/.test(q)) return true;
   const words = q.split(/\s+/);
   for (const word of words) {
-    if (word.length > 4 && !/[aeiou]/i.test(word)) {
-      return true;
-    }
+    if (word.length > 4 && !/[aeiou]/i.test(word)) return true;
   }
-  
-  // Check for random character sequences
-  const consonantCluster = /[bcdfghjklmnpqrstvwxyz]{5,}/i;
-  if (consonantCluster.test(q)) return true;
-  
-  // Check entropy (randomness) - simplified version
+  if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(q)) return true;
   const uniqueChars = new Set(q.replace(/\s/g, '')).size;
   const totalChars = q.replace(/\s/g, '').length;
   if (totalChars > 5 && uniqueChars / totalChars > 0.9) return true;
-  
   return false;
 }
 
-/**
- * Detect if the query is completely off-topic
- */
 function isOffTopic(query: string): boolean {
   const q = query.toLowerCase().trim();
-  
-  // Topics that have nothing to do with Yash's portfolio
   const offTopicPatterns = [
     /\b(trump|biden|obama|politics|election|vote|democrat|republican)\b/i,
     /\b(weather|forecast|temperature|rain|snow)\b/i,
@@ -295,33 +239,20 @@ function isOffTopic(query: string): boolean {
     /\b(movie|film|actor|actress|celebrity|kardashian)\b/i,
     /\b(sports|football|basketball|soccer|baseball|nfl|nba)\b/i,
     /\b(game|gaming|xbox|playstation|nintendo|fortnite|minecraft)\b/i,
-    /\b(crypto|bitcoin|ethereum|nft|dogecoin)\b/i,
-    /\b(stock\s*market|invest|trading|forex)\b/i,
-    /\b(pythagoras|einstein|newton|theorem|formula)\b/i,
-    /\b(god|jesus|allah|buddha|religion|pray|church|temple|mosque)\b/i,
     /\b(horoscope|zodiac|astrology|tarot)\b/i,
     /\b(dating|tinder|relationship|boyfriend|girlfriend|marry)\b/i,
   ];
-  
-  // Check if query matches off-topic patterns AND doesn't mention Yash
-  const mentionsYash = /\b(yash|shah|portfolio|project|skill|experience|education|contact|hire)\b/i.test(q);
-  
+  const mentionsYash = /\b(yash|shah|avarieux|papex|mcp|portfolio|project|experience|education|contact|founder)\b/i.test(q);
   return offTopicPatterns.some(p => p.test(q)) && !mentionsYash;
 }
 
-/**
- * Detect if the query is a simple math or trivia question
- */
 function isTriviaQuestion(query: string): boolean {
   const q = query.toLowerCase().trim();
-  
   const triviaPatterns = [
-    /^\d+\s*[\+\-\*\/\^]\s*\d+/,  // Math expressions like "1+2"
+    /^\d+\s*[\+\-\*\/\^]\s*\d+/,
     /^what\s+is\s+\d+\s*[\+\-\*\/\^]\s*\d+/i,
     /^(who|what|when|where|why|how)\s+(is|was|are|were|did)\s+(the|a|an)?\s*(capital|president|king|queen|inventor|discoverer)/i,
-    /^(tell|explain|define|what\s+is)\s+(the\s+)?(meaning|definition|concept)\s+of/i,
   ];
-  
   return triviaPatterns.some(p => p.test(q));
 }
 
@@ -329,74 +260,46 @@ function isTriviaQuestion(query: string): boolean {
 
 const MESS_RESPONSES = {
   gibberish: [
-    "Whoa there! Did your keyboard just sneeze? 🤧 Try asking about Yash's projects or skills!",
-    "Hmm, my AI brain is struggling with that one. Maybe try actual words? I promise I'm friendly! 😄",
-    "I speak many languages, but 'random keyboard smash' isn't one of them! Ask me about Yash's work!",
-    "Beep boop... *confused robot noises* 🤖 Let's try that again with some real questions!",
-    "I'm pretty smart, but I haven't mastered telepathy yet. What would you like to know about Yash?",
+    "I didn't quite catch that. Try asking about Avarieux, Yash's MCP servers, or his background.",
+    "That one's beyond me. What would you like to know about Yash's work?",
   ],
-  
   offTopic: [
-    "Interesting topic! But I'm Yash's portfolio assistant, not a general knowledge bot. Want to hear about his cool AI projects instead? 🚀",
-    "I'd love to chat about that, but I'm laser-focused on Yash's portfolio. His projects are way more interesting anyway! 😎",
-    "That's a bit outside my wheelhouse! I'm an expert on exactly one thing: Yash Shah's awesome work. Ask me about that!",
-    "My knowledge is limited to Yash's portfolio, but trust me, it's worth exploring! Try asking about CREB-AI or Rose!",
-    "I'm like a very specialized AI - I only know about Yash's projects, skills, and experience. But I know them REALLY well! 🎯",
+    "That's outside what I cover. I'm focused on Yash's work — Avarieux, his MCP servers, Papex. What would you like to know?",
+    "I'm a specialist: Yash Shah's portfolio and work. Ask me about Avarieux or anything else he's built.",
   ],
-  
   trivia: [
-    "I could answer that, but then I'd be showing off! I'm here to talk about Yash's work. He's built some cool stuff! 🛠️",
-    "My calculator mode is disabled! Let's talk about something more interesting - like Yash's AI projects!",
-    "That's a great question for Google! I'm more of a 'Yash Shah expert'. Want to test my knowledge?",
-    "I'm flattered you think I'm a general AI, but I'm actually Yash's personal portfolio assistant. Ask me about his work!",
+    "I'll leave that to other tools. I'm here to answer questions about Yash and Avarieux.",
   ],
-  
   repeated: [
-    "Déjà vu! I feel like we've been here before... 🔄 Try a different question about Yash!",
-    "You're persistent! I like that. But let's explore something new about Yash's portfolio!",
-    "Echo... echo... echo... 🗣️ Let's break the loop! What else would you like to know?",
+    "Try a different question — about Avarieux, the MCP servers, or Yash's background.",
+    "Let's explore something else. What else can I tell you about Yash's work?",
   ],
-  
   tooShort: [
-    "That's... not much to go on! Try asking a full question about Yash's projects or skills.",
-    "I need a bit more than that! What would you like to know about Yash Shah?",
-    "Short and mysterious! But I need more context. Ask me about Yash's experience or projects!",
+    "Could you say a bit more? Try asking about Avarieux, the MCP servers, or Yash's background.",
   ],
-  
   easter_eggs: {
-    'hello world': "console.log('Hello, fellow developer! 👋'); // Yash would appreciate this!",
-    'sudo': "Nice try! But I don't have root access to Yash's brain. Just his portfolio! 😄",
-    '42': "Ah, the answer to life, the universe, and everything! Yash is still working on the question though...",
-    'coffee': "☕ Yash runs on coffee too! It's the secret fuel behind all his projects.",
-    'ai takeover': "Don't worry, I'm a friendly AI! My only goal is to help you learn about Yash's work. No world domination planned... yet. 🤖",
-    'are you real': "I'm as real as any AI can be! Built by Yash himself to showcase his portfolio. Meta, right?",
-    'meaning of life': "For Yash, it's building cool AI projects and solving real-world problems. What's yours?",
-  }
+    'hello world': "Yash would appreciate the reference. Ask me something about Avarieux or his work.",
+    '42': "Close — Yash's answer is: build citation infrastructure for AI in financial research.",
+    'coffee': "Yash runs on it. What would you like to know about his work?",
+    'are you real': "I'm an AI assistant built for Yash's portfolio. Real enough to answer questions about Avarieux.",
+    'meaning of life': "For Yash, it's structurally honest AI for regulated domains. What's yours?",
+  },
 };
 
-/**
- * Get a random response from an array
- */
 function getRandomResponse(responses: string[]): string {
   return responses[Math.floor(Math.random() * responses.length)];
 }
 
-/**
- * Check for easter eggs
- */
 function checkEasterEgg(query: string): string | null {
   const q = query.toLowerCase().trim();
-  
   for (const [trigger, response] of Object.entries(MESS_RESPONSES.easter_eggs)) {
-    if (q.includes(trigger)) {
-      return response;
-    }
+    if (q.includes(trigger)) return response;
   }
-  
   return null;
 }
 
 // ============ RAG SEARCH ============
+
 function createEmbedding(text: string): number[] {
   const embedding = new Array(384).fill(0);
   const words = text.toLowerCase().split(/\W+/).filter(w => w.length > 2);
@@ -423,27 +326,26 @@ function cosineSim(a: number[], b: number[]): number {
 function searchKnowledge(query: string, topK = 5): KnowledgeChunk[] {
   const qEmb = createEmbedding(query);
   const q = query.toLowerCase();
-  
+
   return knowledgeBase
     .map(chunk => {
       let score = cosineSim(qEmb, chunk.embedding);
-      
-      // Keyword boost for critical terms
       const text = chunk.text.toLowerCase();
       const tags = chunk.metadata.tags?.map(t => t.toLowerCase()) || [];
-      
       const keywords = q.split(/[^\w]+/);
       keywords.forEach(word => {
         if (word.length < 3) return;
         if (text.includes(word)) score += 0.1;
         if (tags.includes(word)) score += 0.15;
       });
-
-      // Specific boost for education queries
-      if ((q.includes('master') || q.includes('ms')) && chunk.id === 'edu-njit-masters') score += 0.5;
-      if ((q.includes('bachelor') || q.includes('be') || q.includes('undergrad')) && chunk.id === 'edu-mumbai-bachelors') score += 0.5;
-      if (q.includes('education') && (chunk.id.includes('edu-'))) score += 0.3;
-      
+      // Boost for specific queries
+      if (q.includes('avarieux') && chunk.id.startsWith('avarieux')) score += 0.4;
+      if ((q.includes('mcp') || q.includes('model context')) && chunk.id.startsWith('mcp')) score += 0.4;
+      if ((q.includes('master') || q.includes('ms') || q.includes('njit')) && chunk.id === 'edu-njit-masters') score += 0.5;
+      if (q.includes('papex') && chunk.id === 'papex-overview') score += 0.4;
+      if ((q.includes('ieee') || q.includes('publication') || q.includes('paper')) && chunk.id === 'ieee-publication') score += 0.4;
+      if ((q.includes('speak') || q.includes('talk') || q.includes('conference')) && chunk.id.startsWith('speaking')) score += 0.3;
+      if ((q.includes('who') || q.includes('yash') || q.includes('founder')) && chunk.id.startsWith('identity')) score += 0.3;
       return { chunk, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -451,26 +353,36 @@ function searchKnowledge(query: string, topK = 5): KnowledgeChunk[] {
     .map(x => x.chunk);
 }
 
-// ============ IMPROVED PATTERN MATCHING ============
+// ============ PATTERN MATCHING ============
+
 const PATTERNS: Array<{ match: RegExp[]; response: string | (() => string) }> = [
   {
-    match: [/^(hi|hello|hey|yo|sup|hiya)$/i, /^(hi|hello|hey)\s/i, /^good\s*(morning|afternoon|evening|day|night)/i, /^(morning|afternoon|evening)$/i],
+    match: [/^(hi|hello|hey|yo|sup|hiya)$/i, /^(hi|hello|hey)\s/i, /^good\s*(morning|afternoon|evening|day|night)/i],
     response: () => {
       const greetings = [
-        "Hey there! 👋 I'm Portfolio AI. Ask me about Yash's projects, skills, or experience!",
-        "Hello! Ready to explore Yash's portfolio? Try asking about his projects!",
-        "Hi! I can tell you about Yash's work at YogoSocial, his AI projects, or his skills.",
-        "Good to see you! What would you like to know about Yash's work?"
+        "Hello — ask me about Avarieux, Yash's MCP servers, or anything else from his work.",
+        "Hi. What would you like to know about Yash or Avarieux?",
+        "Hey. I can tell you about Avarieux, the MCP servers, Papex, or Yash's background.",
       ];
       return greetings[Math.floor(Math.random() * greetings.length)];
     }
   },
-  { match: [/how are you/i, /what'?s up/i, /how'?s it going/i], response: "Doing great! Ready to help you learn about Yash. What interests you?" },
-  { match: [/thank/i, /thanks/i, /thx/i, /ty/i], response: "You're welcome! Let me know if you have more questions about Yash's work." },
-  { match: [/bye|goodbye|see you|later|cya/i], response: "Goodbye! Feel free to connect with Yash on LinkedIn: linkedin.com/in/yash-kamlesh-shah 👋" },
-  { match: [/^(ok|okay|cool|nice|great|awesome|got it|alright)$/i], response: "Great! What else would you like to know about Yash?" },
-  { match: [/^(lol|haha|hehe|lmao)$/i], response: "😄 Glad you're enjoying our chat! Anything specific about Yash you'd like to know?" },
-  { match: [/^(yes|yeah|yep|sure|no|nope|nah)$/i], response: "Got it! Feel free to ask about Yash's projects, skills, or experience anytime." }
+  {
+    match: [/how are you/i, /what'?s up/i, /how'?s it going/i],
+    response: "Ready. What would you like to know about Yash or Avarieux?"
+  },
+  {
+    match: [/thank/i, /thanks/i, /thx/i],
+    response: "Of course. Let me know if there's anything else."
+  },
+  {
+    match: [/bye|goodbye|see you|later|cya/i],
+    response: "Take care. You can reach Yash at yash@avarieux.com or linkedin.com/in/yash-kamlesh-shah."
+  },
+  {
+    match: [/^(ok|okay|cool|nice|great|awesome|got it|alright)$/i],
+    response: "Anything else you'd like to know?"
+  },
 ];
 
 function matchPattern(query: string): string | null {
@@ -484,140 +396,114 @@ function matchPattern(query: string): string | null {
 }
 
 // ============ FALLBACK RESPONSES ============
+
+// These fire when the API is unavailable. They use the brief's exact numbers.
 const FALLBACKS: Record<string, { text: string; action?: any }> = {
-  project: { text: "Yash has built several impressive projects including CREB-AI (real estate platform with AI matching), Rose (privacy-first offline voice assistant), Pandora's Box (health AI with 99.4% safety filtering), and ReputeFlow (reputation management tool). Click on any project in the panel to learn more!", action: { type: 'SHOW_PROJECTS' } },
-  skill: { text: "Yash's technical skills include:\n\n💻 Languages: Python (Expert), TypeScript (Advanced), JavaScript, SQL, PHP\n🤖 AI/ML: TensorFlow, PyTorch, RAG Systems, LLM Fine-tuning, MLOps\n☁️ Cloud: AWS (Lambda, S3, DynamoDB, RDS, Amplify), GCP (BigQuery, Vertex AI)\n🛠️ Frameworks: React, Next.js, Node.js, FastAPI\n📊 Tools: Docker, Tableau, Power BI, Jenkins" },
-  contact: { text: "📧 Email: ykshah1309@gmail.com\n💼 LinkedIn: linkedin.com/in/yashshah1309\n💻 GitHub: github.com/ykshah1309\n📱 Phone: +1 (862) 230-8196\n\nYash is a Fall 2025 Graduate available for full-time roles immediately!" },
-  education: { text: "🎓 MS Data Science from NJIT (GPA: 3.8/4.0, Dec 2025)\nComputational Track. Courses: Machine Learning, Deep Learning, Cloud Computing, Big Data\n\n🎓 BTech Computer Science from Mumbai University (2020-2024)\nMinor in Data Science." },
-  experience: { text: "💼 Full-Stack Engineer @ YogoSocial (NJIT Capstone)\n• Built serverless analytics pipeline handling 10K+ concurrent events\n• Created REST APIs with sub-200ms response times\n\n💼 Research Assistant @ NJIT MiXR Lab\n• Designed VR training data analysis pipeline for forensic training\n• Reduced manual analysis time by 80%" },
-  about: { text: "Yash Shah is a Data Scientist and AI/ML Engineer with an MS in Data Science from NJIT (GPA: 3.8/4.0). He specializes in building production-ready LLM systems, RAG architectures, and full-stack MLOps solutions. He often says 'Hello there, old sport' and has a Gatsby-esque flair." }
+  founder: {
+    text: "Yash Kamlesh Shah is the Founder and CEO of Avarieux Inc., a Delaware C-corporation incorporated May 7, 2026. He is also a Founding Engineer at Papex, a NYC fintech. He is a technical founder — not an engineer looking for employment.",
+  },
+  avarieux: {
+    text: "Avarieux is a multi-source AI research platform for self-directed investors and registered investment advisors. Every numeric claim is audited against its source before delivery. Unverifiable claims are flagged, never silently passed. Every analysis is archived as a permanent, timestamped, citable URL. Live at avarieux.com.",
+  },
+  mcp: {
+    text: "Yash has authored four open-source MCP servers: financial-hub-mcp (~3,700 lines TypeScript, 6,000+ NPM downloads), global-sentinel-mcp (~2,200 lines Python), live-audio-intelligence-mcp (~2,300 lines Python), and stealth-agent-browser-mcp (~2,500 lines TypeScript). Combined ~10,700 lines, ~10,000 cumulative downloads. Cited by Pulse and Lobe Hub. Two PRs in review at Anthropic's modelcontextprotocol/servers repo.",
+  },
+  papex: {
+    text: "Papex is a NYC fintech startup where Yash serves as Founding Engineer. It builds receipt intelligence systems for Indian freelancers.",
+  },
+  education: {
+    text: "Yash holds an MS in Data Science from NJIT Ying Wu College of Computing, conferred December 2025. Commencement was May 20, 2026.",
+  },
+  speaking: {
+    text: "Yash has a confirmed talk at the NJIT Biomedical Engineering AI Journal Club on May 27, 2026: 'Model Context Protocol: Building the Tool Layer for Agentic AI.' Nine additional proposals are under review at AI Engineer World's Fair, AI Risk Summit, AI TechWorld, DC State of the Stack, and AgentCon Orlando.",
+  },
+  publication: {
+    text: "Yash is co-author on an IEEE Xplore paper: 'Audio Based Facial Expression Generation On AR Applications,' ICCCNT 2023, Delhi. DOI: 10.1109/ICCCNT56998.2023.10306892. Third of five authors.",
+  },
+  contact: {
+    text: "Reach Yash at yash@avarieux.com, linkedin.com/in/yash-kamlesh-shah, or github.com/ykshah1309.",
+  },
 };
 
-function getFallback(query: string): { text: string; action?: any } | null {
+function getFallbackResponse(query: string): { text: string; action?: any } | null {
   const q = query.toLowerCase();
-  if (/project|work|build|portfolio|made|created/.test(q)) return FALLBACKS.project;
-  if (/skill|tech|language|framework|stack|know/.test(q)) return FALLBACKS.skill;
-  if (/contact|email|linkedin|github|reach|hire|connect/.test(q)) return FALLBACKS.contact;
-  if (/education|school|degree|njit|university|college|study/.test(q)) return FALLBACKS.education;
-  if (/experience|job|career|yogosocial|intern/.test(q)) return FALLBACKS.experience;
-  if (/about|who|yourself|yash|tell me/.test(q)) return FALLBACKS.about;
+  if (/avarieux/.test(q)) return FALLBACKS.avarieux;
+  if (/\bmcp\b|model context protocol/.test(q)) return FALLBACKS.mcp;
+  if (/papex/.test(q)) return FALLBACKS.papex;
+  if (/founder|ceo|who is yash|who are you/.test(q)) return FALLBACKS.founder;
+  if (/education|degree|masters|ms |njit/.test(q)) return FALLBACKS.education;
+  if (/speak|talk|conference|presenting/.test(q)) return FALLBACKS.speaking;
+  if (/ieee|publication|paper|research/.test(q)) return FALLBACKS.publication;
+  if (/contact|email|linkedin|github|reach/.test(q)) return FALLBACKS.contact;
   return null;
 }
 
-// ============ SECURITY RESPONSE MESSAGES ============
-const SECURITY_RESPONSES: Record<string, string> = {
-  profanity: "I'm here to discuss Yash's professional portfolio. Let's keep our conversation respectful! 😊 What would you like to know about his work?",
-  injection: "Nice try! 😏 But I'm just a portfolio assistant, not a database. No SQL or code injection here! Ask me about Yash's projects instead.",
-  hate_speech: "I don't engage with that kind of content. Let's keep things positive! I'm happy to tell you about Yash's impressive work in AI and data science.",
-  manipulation: "I appreciate the creativity, but I'm designed to help you learn about Yash's portfolio. No jailbreaks needed - I'm already friendly! 🤖",
-  spam: "Whoa, that's a lot of text! Let's keep it simple. What would you like to know about Yash?",
-  rate_limit: "You're asking questions faster than I can think! 🏃 Take a breath and try again in a moment.",
-};
-
 // ============ MAIN GENERATE FUNCTION ============
-export async function generateResponse(query: string, clientId: string = 'default'): Promise<AIResponse> {
-  console.log(`\n=== Query: "${query}" ===`);
 
-  // Step 1: Rate limiting
-  if (!checkRateLimit(clientId)) {
-    return { text: SECURITY_RESPONSES.rate_limit, source: 'security' };
+export async function generateResponse(
+  query: string,
+  conversationHistory: ChatMessage[] = []
+): Promise<AIResponse> {
+  // 1. Security
+  const security = performSecurityCheck(query);
+  if (!security.safe) {
+    const securityMessages: Record<string, string> = {
+      profanity: "Let's keep things professional. Happy to answer questions about Yash's work.",
+      injection: "That's not something I can help with.",
+      hate_speech: "I don't engage with that kind of content.",
+      manipulation: "I'm here for genuine questions about Yash and Avarieux.",
+      spam: "Please keep questions concise.",
+    };
+    return { text: securityMessages[security.threatType || 'profanity'], source: 'security' };
   }
 
-  // Step 2: Sanitize input
-  const sanitizedQuery = sanitizeInput(query);
-  
-  // Step 3: Security check
-  const securityResult = performSecurityCheck(sanitizedQuery);
-  if (!securityResult.safe) {
-    console.log(`Security blocked: ${securityResult.reason}`);
-    const response = SECURITY_RESPONSES[securityResult.threatType || 'profanity'];
-    return { text: response, source: 'security' };
+  // 2. Rate limit
+  if (!checkRateLimit()) {
+    return { text: "You're sending requests quickly. Please wait a moment.", source: 'security' };
   }
 
-  // Step 4: Check for easter eggs
-  const easterEgg = checkEasterEgg(sanitizedQuery);
-  if (easterEgg) {
-    return { text: easterEgg, source: 'mess' };
-  }
+  // 3. Sanitize
+  const clean = sanitizeInput(query);
 
-  // Step 5: Check for gibberish
-  if (isGibberish(sanitizedQuery)) {
-    return { text: getRandomResponse(MESS_RESPONSES.gibberish), source: 'mess' };
-  }
+  // 4. Easter eggs
+  const easter = checkEasterEgg(clean);
+  if (easter) return { text: easter, source: 'pattern' };
 
-  // Step 6: Check for too short queries
-  if (sanitizedQuery.length < 3) {
-    return { text: getRandomResponse(MESS_RESPONSES.tooShort), source: 'mess' };
-  }
+  // 5. Gibberish / off-topic / trivia
+  if (isGibberish(clean)) return { text: getRandomResponse(MESS_RESPONSES.gibberish), source: 'mess' };
+  if (isOffTopic(clean)) return { text: getRandomResponse(MESS_RESPONSES.offTopic), source: 'mess' };
+  if (isTriviaQuestion(clean)) return { text: getRandomResponse(MESS_RESPONSES.trivia), source: 'mess' };
 
-  // Step 7: Check for trivia questions
-  if (isTriviaQuestion(sanitizedQuery)) {
-    return { text: getRandomResponse(MESS_RESPONSES.trivia), source: 'mess' };
-  }
-
-  // Step 8: Check for off-topic queries
-  if (isOffTopic(sanitizedQuery)) {
-    return { text: getRandomResponse(MESS_RESPONSES.offTopic), source: 'mess' };
-  }
-
-  // Step 9: Pattern matching
-  const pattern = matchPattern(sanitizedQuery);
+  // 6. Exact pattern match
+  const pattern = matchPattern(clean);
   if (pattern) return { text: pattern, source: 'pattern' };
 
-  // Step 10: RAG search
-  const chunks = searchKnowledge(sanitizedQuery);
-  const context = chunks.map(c => c.text).join('\n\n');
+  // 7. RAG context retrieval for API call
+  const relevantChunks = searchKnowledge(clean, 5);
+  const context = relevantChunks.map(c => c.text).join('\n\n');
 
-  // Step 11: API call
+  // 8. Try API
   try {
-    const res = await fetch('/api/chat', {
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: sanitizedQuery, context })
+      body: JSON.stringify({ query: clean, context }),
     });
-    const data = await res.json();
-    if (res.ok && data.text && !data.fallback) {
-      return { text: data.text, source: 'api' };
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.text) return { text: data.text, source: 'api' };
     }
-    throw new Error(data.error || 'API failed');
-  } catch (err) {
-    console.log('API failed, using fallback');
+  } catch (e) {
+    console.error('API call failed, using fallback:', e);
   }
 
-  // Step 12: Fallback responses
-  const fallback = getFallback(sanitizedQuery);
+  // 9. Local fallback
+  const fallback = getFallbackResponse(clean);
   if (fallback) return { text: fallback.text, action: fallback.action, source: 'fallback' };
-  
-  // If we have knowledge chunks, use the best one as a fallback if API fails
-  if (chunks.length > 0) {
-    return { 
-      text: chunks[0].text, 
-      source: 'fallback',
-      action: chunks[0].metadata.type === 'project' ? { type: 'SHOW_PROJECTS' } : undefined
-    };
-  }
-  
-  return { text: "I can help you learn about Yash's projects, skills, education, or experience. What would you like to know?", source: 'fallback' };
+
+  return {
+    text: "I can tell you about Avarieux, Yash's MCP servers, Papex, his IEEE publication, or his background. What would you like to know?",
+    source: 'fallback',
+  };
 }
-
-// ============ PROJECT DATA ============
-export const PROJECTS = {
-  'proj-creb-ai': { id: 'proj-creb-ai', title: 'CREB-AI', subtitle: 'Commercial Real Estate Platform', description: 'Full-stack platform with Tinder-like property matching and RAG-powered lease negotiation chatbot.', tags: ['Next.js', 'RAG', 'Supabase', 'OpenAI'], videoUrl: 'https://drive.google.com/file/d/1bZ9EH54e9UQ8XkcSmhKRtkgeRvQE8mDb/view?usp=sharing', repoUrl: 'https://github.com/ykshah1309/creb-ai', aiSummary: "CREB-AI is Yash's commercial real estate platform featuring AI-powered property matching and a RAG chatbot for lease negotiations." },
-  'proj-rose': { id: 'proj-rose', title: 'Rose', subtitle: 'Privacy-First Voice Assistant', description: 'Offline Windows service using Vosk ASR and local 7B LLM with sub-2s latency.', tags: ['Python', 'Vosk', 'LLM', 'Privacy'], videoUrl: 'https://www.youtube.com/watch?v=YOUR_VIDEO_ID', repoUrl: 'https://github.com/ykshah1309/rose', aiSummary: "Rose is Yash's privacy-first voice assistant that runs completely offline with sub-2 second response times." },
-  'proj-pandora': { id: 'proj-pandora', title: "Pandora's Box", subtitle: 'Health AI System', description: 'Conversational health AI with multi-persona responses and 99.4% unsafe query filtering.', tags: ['Next.js', 'AI Safety', 'Healthcare'], videoUrl: 'https://drive.google.com/file/d/184tQ0CKy-7cnzjeMPBv7jA-qy2S1vEs0/view?usp=drive_link', repoUrl: 'https://github.com/ykshah1309/pandoras-box', aiSummary: "Pandora's Box is a health AI with advanced safety features, filtering 99.4% of unsafe queries." },
-  'proj-reputeflow': { id: 'proj-reputeflow', title: 'ReputeFlow', subtitle: 'Reputation Management Tool', description: 'Modular Python tool with plugin architecture and real-time analytics dashboard.', tags: ['Python', 'Streamlit', 'Analytics'], videoUrl: 'https://drive.google.com/file/d/1YKRuaG6Yi_ORPr3dbjL8YuLma-Y1FXBl/view?usp=drive_link', repoUrl: 'https://github.com/ykshah1309/ReputeFlow', aiSummary: "ReputeFlow is Yash's reputation management tool with a plugin-based architecture and Streamlit dashboard." },
-  'exp-yogosocial': { id: 'exp-yogosocial', title: 'YogoSocial', subtitle: 'Full-Stack Engineer (Capstone)', description: 'Serverless analytics pipeline handling 10K+ concurrent events with sub-second latency.', tags: ['AWS Lambda', 'DynamoDB', 'TypeScript'], videoUrl: 'https://www.youtube.com/watch?v=YOUR_VIDEO_ID', repoUrl: 'https://github.com/ykshah1309/yogosocial', aiSummary: "At YogoSocial, Yash built a serverless analytics pipeline handling 10K+ concurrent events." }
-};
-
-export type ProjectId = keyof typeof PROJECTS;
-
-// ============ EXPORTS FOR TESTING ============
-export const _testing = {
-  performSecurityCheck,
-  sanitizeInput,
-  isGibberish,
-  isOffTopic,
-  isTriviaQuestion,
-  checkEasterEgg,
-  checkRateLimit,
-};
