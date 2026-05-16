@@ -1,15 +1,16 @@
-// /about — Phase 1: copy only, no styling work yet.
+// /about
 import Nav from '../components/Nav';
 
 export default function AboutPage() {
   return (
     <>
       <Nav />
-      <main className="max-w-2xl mx-auto px-4 py-20">
+      <main className="page-main">
+        <h1 style={{ marginBottom: '3rem' }}>About</h1>
 
         {/* ── SECTION 1: What I'm building ── */}
-        <section aria-labelledby="building-heading">
-          <h1 id="building-heading">What I&rsquo;m building</h1>
+        <section aria-labelledby="building-heading" className="about-section">
+          <h2 id="building-heading" style={{ marginBottom: '1.25rem' }}>What I&rsquo;m building</h2>
           <p>
             Avarieux is a multi-source AI research platform for self-directed investors and registered
             investment advisors. The architectural premise is one I haven&rsquo;t seen applied rigorously
@@ -25,15 +26,15 @@ export default function AboutPage() {
             non-advisory by design, not by disclaimer.
           </p>
           <p>
-            The company is incorporated in Delaware as a C-corporation, formed via Stripe Atlas on
-            May 7, 2026. Publicly announced May 20, 2026. Waitlist and early access at{' '}
+            Incorporated in Delaware as a C-corporation via Stripe Atlas, May 7, 2026.
+            Publicly announced May 20, 2026. Waitlist and early access at{' '}
             <a href="https://avarieux.com" target="_blank" rel="noopener noreferrer">avarieux.com</a>.
           </p>
         </section>
 
         {/* ── SECTION 2: How I got here ── */}
-        <section aria-labelledby="arc-heading">
-          <h2 id="arc-heading">How I got here</h2>
+        <section aria-labelledby="arc-heading" className="about-section">
+          <h2 id="arc-heading" style={{ marginBottom: '1.25rem' }}>How I got here</h2>
           <p>
             I came out of NJIT&rsquo;s data science program in late 2025 with a specific problem I
             couldn&rsquo;t stop thinking about: the models everyone was deploying into financial
@@ -56,8 +57,8 @@ export default function AboutPage() {
         </section>
 
         {/* ── SECTION 3: The work I keep returning to ── */}
-        <section aria-labelledby="work-heading">
-          <h2 id="work-heading">The work I keep returning to</h2>
+        <section aria-labelledby="work-heading" className="about-section">
+          <h2 id="work-heading" style={{ marginBottom: '1.25rem' }}>The work I keep returning to</h2>
           <p>
             MCP architecture. The Model Context Protocol is the most interesting infrastructure
             layer to emerge in the agentic AI space — it&rsquo;s the standard that lets language
@@ -72,8 +73,8 @@ export default function AboutPage() {
             design problem, and a product problem simultaneously.
           </p>
           <p>
-            The gap between what AI can do and what it can be held accountable for. That&rsquo;s the
-            territory I work in.
+            The gap between what AI can do and what it can be held accountable for.
+            That&rsquo;s the territory I work in.
           </p>
         </section>
 

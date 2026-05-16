@@ -4,36 +4,48 @@ import { PROJECTS, PROJECT_ORDER, type Project } from '../../lib/projects-data';
 
 function ProjectSection({ project }: { project: Project }) {
   return (
-    <section aria-labelledby={`${project.id}-heading`} className="mb-14">
-      <h2 id={`${project.id}-heading`}>{project.title}</h2>
-      <p><strong>{project.subtitle}</strong></p>
-      <p className="mt-2">{project.description}</p>
+    <article
+      aria-labelledby={`${project.id}-heading`}
+      className="work-entry"
+    >
+      <div className="work-entry-inner">
+        <div className="work-accent-bar" aria-hidden="true" />
 
-      {/* Stats */}
-      {project.stats && project.stats.length > 0 && (
-        <ul className="mt-2 list-none p-0">
-          {project.stats.map((stat, i) => (
-            <li key={i} className="text-sm text-gray-600">
-              <span className="font-medium">{stat.value}</span> {stat.label}
-            </li>
-          ))}
-        </ul>
-      )}
+        <h2 id={`${project.id}-heading`} className="work-title">
+          {project.title}
+        </h2>
+        <p className="work-subtitle">{project.subtitle}</p>
+        <p className="work-description">{project.description}</p>
 
-      {/* Links */}
-      {project.links.length > 0 && (
-        <p className="mt-3">
-          {project.links.map((link, i) => (
-            <span key={i}>
-              {i > 0 && ' · '}
-              <a href={link.url} target="_blank" rel="noopener noreferrer">
-                {link.label} &rarr;
+        {/* Stats */}
+        {project.stats && project.stats.length > 0 && (
+          <div className="work-stats">
+            {project.stats.map((stat, i) => (
+              <span key={i} className="work-stat">
+                <strong>{stat.value}</strong>&nbsp;{stat.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Links */}
+        {project.links.length > 0 && (
+          <div className="work-links">
+            {project.links.map((link, i) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="work-link"
+              >
+                {link.label}&nbsp;&rarr;
               </a>
-            </span>
-          ))}
-        </p>
-      )}
-    </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -41,29 +53,22 @@ export default function WorkPage() {
   return (
     <>
       <Nav />
-      <main className="max-w-2xl mx-auto px-4 py-20">
-        <h1 className="mb-12">Work</h1>
+      <main className="page-main">
+        <h1 style={{ marginBottom: '1rem' }}>Work</h1>
 
-        {/* MCP intro callout — aggregate context before the four individual servers */}
-        <section aria-labelledby="mcp-intro" className="mb-6">
-          <h2 id="mcp-intro" className="sr-only">Open-Source MCP Servers — Overview</h2>
-          <p>
-            The four MCP servers below are combined ~10,700 lines of code with ~10,000 cumulative
-            NPM downloads. Cited by{' '}
-            <a href="https://pulsemcp.com" target="_blank" rel="noopener noreferrer">Pulse</a>
-            {' '}and{' '}
-            <a href="https://lobehub.com" target="_blank" rel="noopener noreferrer">Lobe Hub</a>
-            {' '}— two major MCP registries. Two pull requests currently in code review at
-            Anthropic&rsquo;s official{' '}
-            <a
-              href="https://github.com/modelcontextprotocol/servers"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              modelcontextprotocol/servers
-            </a>{' '}repository.
-          </p>
-        </section>
+        {/* MCP aggregate callout */}
+        <p style={{ color: 'var(--muted)', marginBottom: '3.5rem', fontSize: '1rem' }}>
+          The four MCP servers below are combined ~10,700 lines of code with ~10,000 cumulative
+          NPM downloads. Cited by{' '}
+          <a href="https://pulsemcp.com" target="_blank" rel="noopener noreferrer">Pulse</a>
+          {' '}and{' '}
+          <a href="https://lobehub.com" target="_blank" rel="noopener noreferrer">Lobe Hub</a>
+          {' '}— two major MCP registries. Two pull requests currently in code review at
+          Anthropic&rsquo;s official{' '}
+          <a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noopener noreferrer">
+            modelcontextprotocol/servers
+          </a>.
+        </p>
 
         {PROJECT_ORDER.map((id) => (
           <ProjectSection key={id} project={PROJECTS[id]} />

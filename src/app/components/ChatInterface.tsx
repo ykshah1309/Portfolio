@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Mic, User, Briefcase, Mail, ArrowLeft, Github, X, Volume2, VolumeX, ChevronRight,
-  Loader2, ExternalLink, MessageSquare, Presentation, BarChart2
+  Mic, User, Briefcase, Mail, ArrowLeft, Github, X, Volume2, VolumeX,
+  Loader2, ExternalLink, MessageSquare, Presentation, BarChart2, ArrowUp
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateResponse, speechController, AIResponse } from '../../lib/ai-assistant';
 import { PROJECTS, PROJECT_ORDER, type ProjectId, type Project } from '../../lib/projects-data';
 
@@ -27,6 +25,8 @@ interface ChatInterfaceProps {
 
 // ============ MAIN COMPONENT ============
 export default function ChatInterface({ onBack, initialQuery }: ChatInterfaceProps) {
+  const reduced = useReducedMotion();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -37,7 +37,6 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Keyed refs for each project card — used to scroll focused card into view.
   const cardRefs = useRef<Partial<Record<ProjectId, HTMLDivElement | null>>>({});
 
   useEffect(() => {
@@ -54,19 +53,16 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // When hoveredProject changes and the panel is open, scroll that card into view.
   useEffect(() => {
     if (showProjects && hoveredProject) {
       const el = cardRefs.current[hoveredProject];
       if (el) {
-        // Small delay so AnimatePresence expansion has started before we scroll.
         setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
       }
     }
   }, [hoveredProject, showProjects]);
 
   // ============ HANDLERS ============
-
   const handleBack = () => {
     speechController.stop();
     onBack();
@@ -112,11 +108,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
       if (!globalMute) speechController.speak(response.text);
 
       if (response.action?.type === 'SHOW_PROJECTS') {
-        // Open the panel unconditionally.
         setShowProjects(true);
-        // If a specific project was identified in the response text, auto-expand
-        // it — but only if it differs from the currently expanded card to avoid
-        // redundant re-renders when the user asks about the same project twice.
         const focused = response.action.focusedProject as ProjectId | undefined;
         if (focused && focused !== hoveredProject) {
           setHoveredProject(focused);
@@ -136,7 +128,6 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
     });
   };
 
-  // On hover, speak the project description (replaces old aiSummary TTS)
   const handleProjectHover = (projectId: ProjectId | null) => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (projectId) {
@@ -144,7 +135,6 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
         setHoveredProject(projectId);
         if (!globalMute) {
           const project = PROJECTS[projectId];
-          // Speak a concise version: title + subtitle + first sentence of description
           const firstSentence = project.description.split('.')[0];
           speechController.speak(`${project.title}. ${project.subtitle}. ${firstSentence}.`);
         }
@@ -157,7 +147,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
   const handleProjectsClick = () => {
     setShowProjects(true);
-    const text = `Here's a look at Yash's work — Avarieux, the four MCP servers, Papex, and his IEEE publication. Click any item to expand it.`;
+    const text = `Here's a look at Yash's work — Avarieux, the four MCP servers, Papex, and his IEEE publication.`;
     addMessage('assistant', text, 'pattern');
     if (!globalMute) speechController.speak(text);
   };
@@ -170,107 +160,207 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
     { icon: Mail,          label: 'Contact',   action: () => handleSend('How do I reach Yash?') },
   ];
 
+  // Motion config helpers
+  const slideUp = reduced
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.1 } }
+    : { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } };
+
+  const panelMotion = reduced
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.1 } }
+    : { initial: { x: '100%' }, animate: { x: 0 }, exit: { x: '100%' }, transition: { type: 'spring' as const, stiffness: 280, damping: 30 } };
+
   // ============ RENDER ============
   return (
-    <div className="fixed inset-0 z-50 flex h-screen overflow-hidden bg-transparent">
+    // Outer wrapper:
+    // - <lg: fixed full-screen overlay (current mobile behavior)
+    // - ≥lg: fixed right-side panel (42% width), left 58% shows landing page through
+    <div
+      className="fixed inset-0 lg:left-auto lg:w-[42%] z-50 flex h-screen overflow-hidden"
+      style={{ backgroundColor: 'var(--background)' }}
+    >
+      {/* Thin left border visible on lg+ split layout */}
+      <div
+        className="hidden lg:block absolute left-0 top-0 bottom-0 w-px"
+        style={{ backgroundColor: 'var(--border)' }}
+        aria-hidden="true"
+      />
 
-      {/* Main Chat Area */}
-      <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${
-        showProjects ? 'hidden md:flex md:w-1/2' : 'w-full'
+      {/* Main Chat Area — shrinks when projects panel open */}
+      <div className={`relative flex flex-col h-full w-full transition-all duration-300 ${
+        showProjects ? 'hidden lg:flex lg:w-[52%]' : 'w-full'
       }`}>
 
         {/* Header */}
-        <header className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-200/50">
+        <header
+          className="chat-header flex items-center justify-between px-4 py-3"
+          style={{ flexShrink: 0 }}
+        >
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={handleBack} className="hover:bg-gray-100/50">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <Avatar className="w-9 h-9">
-              <AvatarFallback className="bg-gray-900 text-white text-sm">YS</AvatarFallback>
-            </Avatar>
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center w-8 h-8 rounded"
+              style={{ color: 'var(--muted)', transition: 'color 150ms ease' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+              aria-label="Back to home"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: 'var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--font-serif)',
+                fontSize: '0.6875rem',
+                color: 'var(--foreground)',
+                fontWeight: 500,
+                flexShrink: 0,
+              }}
+              aria-hidden="true"
+            >
+              Y
+            </div>
             <div>
-              <h1 className="font-semibold text-sm">Yash Shah</h1>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-green-600">● Online</span>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.875rem', fontWeight: 500, color: 'var(--foreground)', marginBottom: 0 }}>
+                Yash Shah
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.6875rem', color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#6ee7b7', display: 'inline-block' }} />
+                  Online
+                </span>
                 {apiStatus === 'calling' && (
-                  <span className="text-blue-600 flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin" /> API
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.6875rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Loader2 size={10} className="animate-spin" /> API
                   </span>
                 )}
-                {apiStatus === 'success' && <span className="text-green-600">✓ API</span>}
-                {apiStatus === 'fallback' && <span className="text-orange-500">⚠ Local</span>}
+                {apiStatus === 'success' && <span style={{ fontSize: '0.6875rem', color: '#6ee7b7' }}>✓ API</span>}
+                {apiStatus === 'fallback' && <span style={{ fontSize: '0.6875rem', color: 'var(--accent)' }}>⚡ Local</span>}
               </div>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => { if (!globalMute) speechController.stop(); setGlobalMute(!globalMute); }}
-            className="hover:bg-gray-100/50"
-          >
-            {globalMute ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </Button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Projects toggle */}
+            <button
+              onClick={handleProjectsClick}
+              className="flex items-center gap-1"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                color: showProjects ? 'var(--accent)' : 'var(--muted)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem 0.5rem',
+                transition: 'color 150ms ease',
+              }}
+              onMouseEnter={e => { if (!showProjects) e.currentTarget.style.color = 'var(--foreground)'; }}
+              onMouseLeave={e => { if (!showProjects) e.currentTarget.style.color = 'var(--muted)'; }}
+              aria-label="Show projects panel"
+            >
+              <Briefcase size={13} />
+              Work
+            </button>
+
+            {/* Mute toggle */}
+            <button
+              onClick={() => { if (!globalMute) speechController.stop(); setGlobalMute(!globalMute); }}
+              style={{
+                color: globalMute ? 'var(--muted)' : 'var(--foreground)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                transition: 'color 150ms ease',
+              }}
+              aria-label={globalMute ? 'Unmute' : 'Mute'}
+            >
+              {globalMute ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            </button>
+          </div>
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-50/30 backdrop-blur-[2px]">
-          <div className="max-w-2xl mx-auto space-y-4">
+        <div
+          className="chat-messages-area flex-1 overflow-y-auto"
+          style={{ padding: '1.5rem 1.25rem' }}
+        >
+          <div style={{ maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                {...slideUp}
+                style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}
               >
-                <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-2' : ''}`}>
-                  <div className={`p-3 rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-white/90 backdrop-blur-sm border border-gray-200/50 shadow-sm'
-                  }`}>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                <div style={{ maxWidth: '88%' }}>
+                  <div className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'}
+                    style={{ padding: msg.role === 'user' ? '0.625rem 0.875rem' : '0.125rem 0 0.125rem 0.875rem' }}
+                  >
+                    <p style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: '0.9375rem',
+                      lineHeight: 1.65,
+                      whiteSpace: 'pre-wrap',
+                      marginBottom: 0,
+                      maxWidth: 'none',
+                    }}>
+                      {msg.content}
+                    </p>
                   </div>
                   {msg.role === 'assistant' && (
-                    <div className="flex items-center gap-2 mt-1 px-1">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.375rem', paddingLeft: '0.875rem' }}>
                       <button
                         onClick={() => toggleMessageMute(msg.id)}
-                        className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors ${
-                          msg.isMuted
-                            ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                            : 'text-blue-500 hover:text-blue-700 hover:bg-blue-50'
-                        }`}
-                        title={msg.isMuted ? 'Click to hear this message' : 'Click to stop/mute'}
+                        style={{
+                          fontFamily: 'var(--font-sans)',
+                          fontSize: '0.6875rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          color: msg.isMuted ? 'var(--muted)' : 'var(--accent)',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          opacity: 0.7,
+                          transition: 'opacity 150ms ease',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                        title={msg.isMuted ? 'Hear this message' : 'Mute this message'}
                       >
-                        {msg.isMuted
-                          ? <><VolumeX className="w-3 h-3" /> Muted</>
-                          : <><Volume2 className="w-3 h-3" /> Speak</>
-                        }
+                        {msg.isMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                        {msg.isMuted ? 'Muted' : 'Speak'}
                       </button>
-                      <span className="text-xs text-gray-400">
-                        {msg.source === 'api'      && '🤖 AI'}
-                        {msg.source === 'fallback' && '📚 Local'}
-                        {msg.source === 'pattern'  && '💬 Quick'}
-                        {msg.source === 'security' && '🛡️ Security'}
-                        {msg.source === 'mess'     && '🧹 Mess'}
-                      </span>
                     </div>
                   )}
                 </div>
               </motion.div>
             ))}
+
             {isTyping && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 p-3 rounded-2xl shadow-sm">
-                  <div className="flex gap-1">
-                    {[0, 1, 2].map(i => (
-                      <motion.div
-                        key={i}
-                        className="w-2 h-2 bg-gray-400 rounded-full"
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.15 }}
-                      />
-                    ))}
-                  </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: 'flex', paddingLeft: '0.875rem', borderLeft: '2px solid var(--accent)' }}
+              >
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', padding: '0.375rem 0' }}>
+                  {[0, 1, 2].map(i => (
+                    <motion.span
+                      key={i}
+                      style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', display: 'block' }}
+                      animate={reduced ? {} : { y: [0, -5, 0] }}
+                      transition={{ duration: 0.45, repeat: Infinity, delay: i * 0.12 }}
+                    />
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -279,55 +369,75 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
         </div>
 
         {/* Quick Actions */}
-        <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
-          <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto no-scrollbar">
+        <div
+          style={{
+            padding: '0.625rem 1.25rem',
+            borderTop: '1px solid var(--border)',
+            flexShrink: 0,
+          }}
+        >
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {quickActions.map((action, i) => (
-              <Button
+              <button
                 key={i}
-                variant="outline"
-                size="sm"
                 onClick={action.action}
-                className="whitespace-nowrap bg-white/50 hover:bg-white/80"
+                className="quick-chip"
               >
-                <action.icon className="w-4 h-4 mr-1" />
+                <action.icon size={12} style={{ flexShrink: 0 }} />
                 {action.label}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
 
         {/* Input */}
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
+        <div
+          style={{
+            padding: '0.75rem 1.25rem 1rem',
+            flexShrink: 0,
+          }}
+        >
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
-            className="max-w-2xl mx-auto flex gap-2"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about Avarieux, the MCP work, speaking, or anything else."
-              className="flex-1 px-4 py-2 rounded-full border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
+              placeholder="Ask about Avarieux, the MCP work, speaking..."
+              aria-label="Ask Yash anything"
+              className="chat-input-field"
+              style={{ flex: 1 }}
               disabled={isTyping}
             />
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="icon"
               onClick={handleMic}
               disabled={isTyping}
-              className="rounded-full bg-white/50 hover:bg-white/80"
+              style={{
+                color: 'var(--muted)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                flexShrink: 0,
+                transition: 'color 150ms ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+              aria-label="Voice input"
             >
-              <Mic className="w-4 h-4" />
-            </Button>
-            <Button
+              <Mic size={16} />
+            </button>
+            <button
               type="submit"
-              size="icon"
               disabled={isTyping || !input.trim()}
-              className="rounded-full bg-gray-900 hover:bg-gray-800"
+              className="chat-send-btn"
+              aria-label="Send message"
             >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+              <ArrowUp size={16} />
+            </button>
           </form>
         </div>
       </div>
@@ -336,41 +446,87 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
       <AnimatePresence>
         {showProjects && (
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25 }}
-            className="fixed md:relative right-0 top-0 h-full w-full md:w-1/2 bg-white/95 backdrop-blur-md border-l border-gray-200/50 shadow-xl z-30 overflow-hidden"
+            {...panelMotion}
+            className="chat-panel"
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              height: '100%',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 30,
+              overflow: 'hidden',
+            }}
           >
-            {/* Panel Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200/50 bg-gray-50/80">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden"
-                  onClick={() => setShowProjects(false)}
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <h2 className="font-bold text-lg">Work &amp; Projects</h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowProjects(false);
-                  setHoveredProject(null);
-                  speechController.stop();
+            {/* Responsive override: on lg+, side panel is 48% of chat pane */}
+            <style>{`
+              @media (min-width: 1024px) {
+                .projects-panel-inner { position: absolute !important; right: 0; top: 0; width: 48% !important; height: 100%; }
+              }
+            `}</style>
+            <div
+              className="projects-panel-inner"
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'var(--background-subtle)',
+                borderLeft: '1px solid var(--border)',
+              }}
+            >
+              {/* Panel Header */}
+              <div
+                className="chat-header"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.875rem 1.25rem',
+                  flexShrink: 0,
                 }}
               >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    style={{ display: 'none' }}
+                    className="lg:hidden"
+                    onClick={() => setShowProjects(false)}
+                    aria-label="Close projects panel"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                  <h2 style={{
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    color: 'var(--foreground)',
+                    marginBottom: 0,
+                  }}>
+                    Work &amp; Projects
+                  </h2>
+                </div>
+                <button
+                  onClick={() => { setShowProjects(false); setHoveredProject(null); speechController.stop(); }}
+                  style={{
+                    color: 'var(--muted)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    transition: 'color 150ms ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+                  aria-label="Close projects panel"
+                >
+                  <X size={15} />
+                </button>
+              </div>
 
-            {/* Projects List */}
-            <div className="h-[calc(100%-60px)] overflow-y-auto p-4">
-              <div className="space-y-3">
+              {/* Projects List */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 1.25rem 1.5rem' }}>
                 {PROJECT_ORDER.map((id) => {
                   const project: Project = PROJECTS[id];
                   const isExpanded = hoveredProject === id;
@@ -378,85 +534,86 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                     <div
                       key={id}
                       ref={(el) => { cardRefs.current[id] = el; }}
-                      className="relative"
+                      className={`project-card ${isExpanded ? 'is-expanded' : ''}`}
+                      onClick={() => setHoveredProject(isExpanded ? null : id)}
                       onMouseEnter={() => handleProjectHover(id)}
                       onMouseLeave={() => handleProjectHover(null)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setHoveredProject(isExpanded ? null : id); }}
+                      aria-expanded={isExpanded}
                     >
-                      {/* Project Card */}
-                      <div
-                        onClick={() =>
-                          setHoveredProject(isExpanded ? null : id)
-                        }
-                        className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
-                          isExpanded
-                            ? 'border-gray-900 shadow-md'
-                            : 'border-gray-200 hover:border-gray-400'
-                        }`}
-                      >
-                        <h3 className="font-semibold text-sm">{project.title}</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">{project.subtitle}</p>
+                      <p className="project-card-title">{project.title}</p>
+                      <p className="project-card-subtitle">{project.subtitle}</p>
 
-                        {/* Stats row (if present) */}
-                        {project.stats && project.stats.length > 0 && (
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            {project.stats.map((stat, i) => (
-                              <span key={i} className="flex items-center gap-1 text-xs text-gray-500">
-                                <BarChart2 className="w-3 h-3 text-gray-400" />
-                                <span className="font-medium text-gray-700">{stat.value}</span>
-                                <span>{stat.label}</span>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {project.stats && project.stats.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '0.375rem' }}>
+                          {project.stats.map((stat, i) => (
+                            <span key={i} className="project-stat">
+                              <BarChart2 size={10} style={{ display: 'inline', marginRight: '0.25rem', opacity: 0.5 }} />
+                              <strong>{stat.value}</strong> {stat.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
-                      {/* Expanded Detail Panel */}
+                      {/* Expanded Detail */}
                       <AnimatePresence>
                         {isExpanded && (
                           <motion.div
-                            initial={{ opacity: 0, height: 0 }}
+                            initial={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
+                            exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                            transition={{ duration: reduced ? 0.1 : 0.2 }}
+                            style={{ overflow: 'hidden' }}
                           >
-                            <div className="mt-2 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                              {/* Description */}
-                              <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                {project.description}
-                              </p>
+                            <p style={{
+                              fontFamily: 'var(--font-sans)',
+                              fontSize: '0.875rem',
+                              lineHeight: 1.7,
+                              color: 'var(--foreground)',
+                              marginTop: '0.75rem',
+                              marginBottom: '0.875rem',
+                              maxWidth: 'none',
+                            }}>
+                              {project.description}
+                            </p>
 
-                              {/* Stats detail (if present) */}
-                              {project.stats && project.stats.length > 0 && (
-                                <div className="flex flex-wrap gap-3 mb-3">
-                                  {project.stats.map((stat, i) => (
-                                    <div key={i} className="bg-white border border-gray-200 rounded px-2 py-1">
-                                      <p className="text-xs text-gray-500">{stat.label}</p>
-                                      <p className="text-sm font-semibold text-gray-900">{stat.value}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                            {project.stats && project.stats.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                                {project.stats.map((stat, i) => (
+                                  <div
+                                    key={i}
+                                    style={{
+                                      border: '1px solid var(--border)',
+                                      borderRadius: 3,
+                                      padding: '0.25rem 0.5rem',
+                                    }}
+                                  >
+                                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.6875rem', color: 'var(--muted)', marginBottom: '0.1rem' }}>{stat.label}</p>
+                                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--foreground)', fontWeight: 500, marginBottom: 0 }}>{stat.value}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
-                              {/* Links */}
-                              {project.links.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                  {project.links.map((link, i) => (
-                                    <Button
-                                      key={i}
-                                      size="sm"
-                                      variant={i === 0 ? 'default' : 'outline'}
-                                      onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
-                                      className={i === 0 ? 'bg-gray-900 hover:bg-gray-800' : ''}
-                                    >
-                                      {link.label === 'GitHub' && <Github className="w-3 h-3 mr-1" />}
-                                      {link.label !== 'GitHub' && <ExternalLink className="w-3 h-3 mr-1" />}
-                                      {link.label}
-                                    </Button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                            {project.links.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {project.links.map((link, i) => (
+                                  <a
+                                    key={i}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="work-link"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {link.label === 'GitHub' ? <Github size={12} /> : <ExternalLink size={12} />}
+                                    {link.label}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
