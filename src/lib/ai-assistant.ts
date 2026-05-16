@@ -2,6 +2,8 @@
 // Founder-positioned AI assistant — Phase 1b
 // Security layer unchanged; PROJECTS data, FALLBACKS, and PATTERNS rewritten.
 
+import { type ProjectId } from './projects-data';
+
 // ============ TYPES ============
 export interface KnowledgeChunk {
   id: string;
@@ -16,7 +18,12 @@ export interface KnowledgeChunk {
 
 export interface AIResponse {
   text: string;
-  action?: { type: string; payload?: any };
+  action?: {
+    type: string;
+    payload?: any;
+    // When type === 'SHOW_PROJECTS', optionally focus a specific project card.
+    focusedProject?: ProjectId;
+  };
   source: 'api' | 'fallback' | 'pattern' | 'security' | 'mess';
 }
 
@@ -396,9 +403,9 @@ function matchPattern(query: string): string | null {
 }
 
 // ============ FALLBACK RESPONSES ============
-
-// These fire when the API is unavailable. They use the brief's exact numbers.
-const FALLBACKS: Record<string, { text: string; action?: any }> = {
+// Note: action fields removed — attachProjectAction() post-processor
+// is the sole source of action attachment for all response paths.
+const FALLBACKS: Record<string, { text: string }> = {
   founder: {
     text: "Yash Kamlesh Shah is the Founder and CEO of Avarieux Inc., a Delaware C-corporation incorporated May 7, 2026. He is also a Founding Engineer at Papex, a NYC fintech. He is a technical founder — not an engineer looking for employment.",
   },
@@ -425,7 +432,7 @@ const FALLBACKS: Record<string, { text: string; action?: any }> = {
   },
 };
 
-function getFallbackResponse(query: string): { text: string; action?: any } | null {
+function getFallbackResponse(query: string): { text: string } | null {
   const q = query.toLowerCase();
   if (/avarieux/.test(q)) return FALLBACKS.avarieux;
   if (/\bmcp\b|model context protocol/.test(q)) return FALLBACKS.mcp;
@@ -436,6 +443,61 @@ function getFallbackResponse(query: string): { text: string; action?: any } | nu
   if (/ieee|publication|paper|research/.test(q)) return FALLBACKS.publication;
   if (/contact|email|linkedin|github|reach/.test(q)) return FALLBACKS.contact;
   return null;
+}
+
+// ============ PROJECT-NAME DETECTION POST-PROCESSOR ============
+//
+// Runs on every resolved AIResponse before it is returned to the caller.
+// Checks the AI's response text (not the user's query) for canonical project
+// name mentions. If found, attaches action: { type: 'SHOW_PROJECTS',
+// focusedProject } so ChatInterface.tsx can open the panel and focus the
+// right card.
+//
+// Token design:
+//   - 'Avarieux'                    → project 'avarieux'
+//   - 'financial-hub-mcp'           → project 'financial-hub-mcp'
+//   - 'global-sentinel-mcp'         → project 'global-sentinel-mcp'
+//   - 'live-audio-intelligence-mcp' → project 'live-audio-intelligence-mcp'
+//   - 'stealth-agent-browser-mcp'   → project 'stealth-agent-browser-mcp'
+//   - 'Papex'                       → project 'papex'
+//   - 'IEEE Xplore' | 'ICCCNT'      → project 'ieee-publication'
+//     (NOT bare 'IEEE' — too broad; could match standards-body references)
+//
+// Priority: first match in the ordered list wins for focusedProject.
+// The panel is opened (SHOW_PROJECTS) even if already open — ChatInterface
+// guards against redundant state updates via the existing showProjects flag.
+//
+// Does NOT run on 'security' or 'mess' sources — those responses are
+// short redirects that will never mention project names, so the early
+// return is a micro-optimisation only (the regex checks would be no-ops
+// regardless).
+
+const PROJECT_SIGNAL_MAP: Array<{ pattern: RegExp; id: ProjectId }> = [
+  { pattern: /Avarieux/,                    id: 'avarieux' },
+  { pattern: /financial-hub-mcp/i,          id: 'financial-hub-mcp' },
+  { pattern: /global-sentinel-mcp/i,        id: 'global-sentinel-mcp' },
+  { pattern: /live-audio-intelligence-mcp/i,id: 'live-audio-intelligence-mcp' },
+  { pattern: /stealth-agent-browser-mcp/i,  id: 'stealth-agent-browser-mcp' },
+  { pattern: /Papex/,                       id: 'papex' },
+  { pattern: /IEEE Xplore|ICCCNT/i,         id: 'ieee-publication' },
+];
+
+function attachProjectAction(response: AIResponse): AIResponse {
+  // Skip sources that never discuss projects.
+  if (response.source === 'security' || response.source === 'mess') return response;
+  // Don't overwrite an action already set by caller logic.
+  if (response.action) return response;
+
+  const text = response.text;
+  for (const { pattern, id } of PROJECT_SIGNAL_MAP) {
+    if (pattern.test(text)) {
+      return {
+        ...response,
+        action: { type: 'SHOW_PROJECTS', focusedProject: id },
+      };
+    }
+  }
+  return response;
 }
 
 // ============ MAIN GENERATE FUNCTION ============
@@ -467,7 +529,7 @@ export async function generateResponse(
 
   // 4. Easter eggs
   const easter = checkEasterEgg(clean);
-  if (easter) return { text: easter, source: 'pattern' };
+  if (easter) return attachProjectAction({ text: easter, source: 'pattern' });
 
   // 5. Gibberish / off-topic / trivia
   if (isGibberish(clean)) return { text: getRandomResponse(MESS_RESPONSES.gibberish), source: 'mess' };
@@ -476,7 +538,7 @@ export async function generateResponse(
 
   // 6. Exact pattern match
   const pattern = matchPattern(clean);
-  if (pattern) return { text: pattern, source: 'pattern' };
+  if (pattern) return attachProjectAction({ text: pattern, source: 'pattern' });
 
   // 7. RAG context retrieval for API call
   const relevantChunks = searchKnowledge(clean, 5);
@@ -492,7 +554,7 @@ export async function generateResponse(
 
     if (response.ok) {
       const data = await response.json();
-      if (data.text) return { text: data.text, source: 'api' };
+      if (data.text) return attachProjectAction({ text: data.text, source: 'api' });
     }
   } catch (e) {
     console.error('API call failed, using fallback:', e);
@@ -500,10 +562,10 @@ export async function generateResponse(
 
   // 9. Local fallback
   const fallback = getFallbackResponse(clean);
-  if (fallback) return { text: fallback.text, action: fallback.action, source: 'fallback' };
+  if (fallback) return attachProjectAction({ text: fallback.text, source: 'fallback' });
 
-  return {
-    text: "I can tell you about Avarieux, Yash's MCP servers, Papex, his IEEE publication, or his background. What would you like to know?",
+  return attachProjectAction({
+    text: "I can tell you about Avarieux, Yash's MCP servers, Papex, his IEEE Xplore publication, or his background. What would you like to know?",
     source: 'fallback',
-  };
+  });
 }
