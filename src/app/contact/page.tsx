@@ -1,3 +1,4 @@
+'use client';
 // /contact
 import Nav from '../components/Nav';
 
