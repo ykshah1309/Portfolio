@@ -350,7 +350,7 @@ function searchKnowledge(query: string, topK = 5): KnowledgeChunk[] {
       if ((q.includes('mcp') || q.includes('model context')) && chunk.id.startsWith('mcp')) score += 0.4;
       if ((q.includes('master') || q.includes('ms') || q.includes('njit')) && chunk.id === 'edu-njit-masters') score += 0.5;
       if (q.includes('papex') && chunk.id === 'papex-overview') score += 0.4;
-      if ((q.includes('ieee') || q.includes('publication') || q.includes('paper')) && chunk.id === 'ieee-publication') score += 0.4;
+      if ((q.includes('ieee xplore') || q.includes('icccnt') || q.includes('publication') || q.includes('paper')) && chunk.id === 'ieee-publication') score += 0.4;
       if ((q.includes('speak') || q.includes('talk') || q.includes('conference')) && chunk.id.startsWith('speaking')) score += 0.3;
       if ((q.includes('who') || q.includes('yash') || q.includes('founder')) && chunk.id.startsWith('identity')) score += 0.3;
       return { chunk, score };
@@ -440,7 +440,9 @@ function getFallbackResponse(query: string): { text: string } | null {
   if (/founder|ceo|who is yash|who are you/.test(q)) return FALLBACKS.founder;
   if (/education|degree|masters|ms |njit/.test(q)) return FALLBACKS.education;
   if (/speak|talk|conference|presenting/.test(q)) return FALLBACKS.speaking;
-  if (/ieee|publication|paper|research/.test(q)) return FALLBACKS.publication;
+  // Tightened: require 'ieee xplore' or 'icccnt' (not bare 'ieee') to avoid
+  // routing generic IEEE-standards-body questions to the publication entry.
+  if (/ieee xplore|icccnt|publication|paper|research/.test(q)) return FALLBACKS.publication;
   if (/contact|email|linkedin|github|reach/.test(q)) return FALLBACKS.contact;
   return null;
 }
