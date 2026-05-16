@@ -1,232 +1,369 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Building2, Layers, Mic2, Mail, BookOpen } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import ChatInterface from './ChatInterface';
+import Nav from './Nav';
+import Image from 'next/image';
+
+// Motion helpers — all durations respect prefers-reduced-motion via the hook.
+const stagger = (i: number, base = 0.08) => i * base;
+
+interface FadeUpProps {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+function FadeUp({ children, delay = 0, className, style }: FadeUpProps) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      style={style}
+      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: reduced ? 0.15 : 0.55,
+        delay: reduced ? 0 : delay,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function RevealSection({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      style={style}
+      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{
+        duration: reduced ? 0.15 : 0.6,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+const QUICK_ACTIONS = [
+  { label: 'Avarieux',   query: 'What is Avarieux?' },
+  { label: 'MCP Work',   query: 'Tell me about the MCP servers' },
+  { label: 'Speaking',   query: 'What talks is Yash giving?' },
+  { label: 'Research',   query: 'Tell me about the IEEE publication' },
+  { label: 'Contact',    query: 'How can I reach Yash?' },
+];
 
 export default function LandingPage() {
   const [showChat, setShowChat] = useState(false);
   const [initialQuery, setInitialQuery] = useState('');
+  const [inputValue, setInputValue] = useState('');
+
+  const openChat = (query: string) => {
+    setInitialQuery(query);
+    setShowChat(true);
+  };
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const query = formData.get('search') as string;
-    if (query.trim()) {
-      setInitialQuery(query);
-      setShowChat(true);
-    }
-  };
-
-  const quickActions = [
-    { icon: Building2, label: 'Avarieux',  action: () => handleQuickAction('What is Avarieux?') },
-    { icon: Layers,    label: 'MCP Work',  action: () => handleQuickAction('Tell me about the MCP servers') },
-    { icon: Mic2,      label: 'Speaking',  action: () => handleQuickAction('What talks is Yash giving?') },
-    { icon: Mail,      label: 'Contact',   action: () => handleQuickAction('How can I reach Yash?') },
-    { icon: BookOpen,  label: 'Research',  action: () => handleQuickAction('Tell me about the IEEE publication') },
-  ];
-
-  const handleQuickAction = (query: string) => {
-    setInitialQuery(query);
-    setShowChat(true);
+    if (inputValue.trim()) openChat(inputValue.trim());
   };
 
   return (
     <>
       <AnimatePresence mode="wait">
-        {!showChat ? (
+        {showChat ? (
+          <motion.div
+            key="chat"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 50 }}
+          >
+            <ChatInterface initialQuery={initialQuery} onBack={() => setShowChat(false)} />
+          </motion.div>
+        ) : (
           <motion.div
             key="landing"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="relative z-10 min-h-screen flex items-center justify-center px-4"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <div className="w-full max-w-4xl mx-auto text-center py-12">
+            <Nav />
 
-              {/* Hero Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-              >
-                <p className="text-gray-600 text-lg mb-2">
-                  Hello there, old sport. The name&rsquo;s{' '}
-                  <span className="text-gray-900 font-medium">Yash Shah</span>.
+            {/* ── HERO ── */}
+            <section
+              aria-label="Introduction"
+              style={{
+                minHeight: 'calc(100vh - 73px)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                padding: '5rem 1.5rem 4rem',
+                maxWidth: '760px',
+                margin: '0 auto',
+              }}
+            >
+              {/* Eyebrow */}
+              <FadeUp delay={0}>
+                <p className="hero-eyebrow" style={{ marginBottom: '1.25rem' }}>
+                  Yash Kamlesh Shah
                 </p>
-                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-600 bg-clip-text text-transparent px-2">
-                  Founder &amp; CEO, Avarieux Inc.
+              </FadeUp>
+
+              {/* Headline */}
+              <FadeUp delay={stagger(1)}>
+                <h1 className="hero-headline" style={{ marginBottom: '1.25rem' }}>
+                  Founder &amp; CEO,<br />Avarieux Inc.
                 </h1>
-                <p className="text-gray-500 text-lg sm:text-xl max-w-2xl mx-auto px-4">
+              </FadeUp>
+
+              {/* Subhead */}
+              <FadeUp delay={stagger(2)}>
+                <p className="hero-subhead" style={{ marginBottom: '2rem' }}>
                   Building citation infrastructure for AI in financial research.
                 </p>
-              </motion.div>
+              </FadeUp>
 
-              {/* Avatar */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                className="my-12"
-              >
-                <div className="relative w-32 h-32 sm:w-40 sm:h-40 mx-auto">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 opacity-70 blur-lg animate-pulse"></div>
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 p-1">
-                    <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center shadow-2xl overflow-hidden border-4 border-white/90 backdrop-blur-sm">
-                      <img
-                        src="/Profile_Pic.jpeg"
-                        alt="Yash Shah"
-                        className="w-full h-full object-cover rounded-full"
-                        onError={(e) => {
-                          const target = e.currentTarget as HTMLImageElement;
-                          target.style.display = 'none';
-                          const fallbackDiv = document.createElement('div');
-                          fallbackDiv.className = 'w-full h-full bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center rounded-full';
-                          fallbackDiv.innerHTML = '<span class="text-4xl font-bold text-gray-800">YS</span>';
-                          target.parentNode?.appendChild(fallbackDiv);
-                        }}
-                      />
-                    </div>
+              {/* Avatar + Opening paragraph */}
+              <FadeUp delay={stagger(3)}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '1.5rem',
+                    marginBottom: '2.5rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {/* Avatar */}
+                  <div className="avatar-ring" style={{ flexShrink: 0 }}>
+                    <Image
+                      src="/Profile_Pic.jpeg"
+                      alt="Yash Shah"
+                      width={72}
+                      height={72}
+                      style={{
+                        borderRadius: '50%',
+                        display: 'block',
+                        objectFit: 'cover',
+                      }}
+                      priority
+                    />
                   </div>
-                </div>
-              </motion.div>
 
-              {/* Opening paragraph */}
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                className="max-w-2xl mx-auto mb-10 px-4"
-              >
-                <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
-                  I&rsquo;m building{' '}
+                  <p className="hero-body" style={{ flex: 1, minWidth: '240px', marginBottom: 0 }}>
+                    I&rsquo;m building{' '}
+                    <a
+                      href="https://avarieux.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Avarieux
+                    </a>
+                    {' '}—{' '}
+                    a multi-source AI research platform for self-directed investors and registered investment advisors.
+                    Every numeric claim is audited against its source before delivery.
+                    Every analysis is archived as a permanent, citable URL.
+                    I&rsquo;m also a Founding Engineer at Papex, a NYC fintech,
+                    and I&rsquo;ve spent the past year building open-source infrastructure for the MCP ecosystem.
+                  </p>
+                </div>
+              </FadeUp>
+
+              {/* CTA row */}
+              <FadeUp delay={stagger(4)}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: '1.5rem',
+                    marginBottom: '3rem',
+                  }}
+                >
                   <a
                     href="https://avarieux.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-900 font-medium underline underline-offset-2 hover:text-gray-700 transition-colors"
+                    className="cta-primary"
                   >
-                    Avarieux
+                    Visit Avarieux
+                    <span className="arrow" aria-hidden="true">&nbsp;&rarr;</span>
                   </a>
-                  {' '}&mdash; a multi-source AI research platform for self-directed investors and registered investment advisors.
-                  The premise is simple but uncommon: every numeric claim is audited against its source before delivery,
-                  and every analysis is archived as a permanent, citable URL.
-                  I&rsquo;m also a Founding Engineer at{' '}
-                  <span className="text-gray-900 font-medium">Papex</span>, a NYC fintech,
-                  and I&rsquo;ve spent the past year building open-source infrastructure for the MCP ecosystem.
-                </p>
-              </motion.div>
+                  <a
+                    href="https://linkedin.com/in/yash-kamlesh-shah"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cta-secondary"
+                  >
+                    LinkedIn
+                  </a>
+                  <a
+                    href="https://github.com/ykshah1309"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cta-secondary"
+                  >
+                    GitHub
+                  </a>
+                  <a
+                    href="mailto:yash@avarieux.com"
+                    className="cta-secondary"
+                  >
+                    yash@avarieux.com
+                  </a>
+                </div>
+              </FadeUp>
 
-              {/* Search / Ask Bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.6 }}
-                className="mb-8"
-              >
-                <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto px-2">
+              {/* Ask bar */}
+              <FadeUp delay={stagger(5)}>
+                <form
+                  onSubmit={handleSearch}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    maxWidth: '520px',
+                    marginBottom: '1rem',
+                    borderBottom: '1px solid var(--border)',
+                    paddingBottom: '0.5rem',
+                  }}
+                >
                   <input
                     type="text"
-                    name="search"
-                    placeholder="Ask me anything about Avarieux, the MCP work, or the research..."
-                    className="w-full px-5 py-3 sm:px-6 sm:py-4 pr-14 rounded-full bg-white/80 backdrop-blur-xl border border-gray-200/60 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all shadow-2xl text-base sm:text-lg"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Ask about Avarieux, the MCP work, speaking..."
+                    aria-label="Ask Yash anything"
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: '0.9375rem',
+                      lineHeight: 1.5,
+                    }}
                   />
                   <button
                     type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white flex items-center justify-center hover:scale-110 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/30"
-                    aria-label="Ask"
+                    disabled={!inputValue.trim()}
+                    className="chat-send-btn"
+                    aria-label="Send"
                   >
-                    <Search className="w-5 h-5" />
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <path d="M9 15V3M9 3L3.5 8.5M9 3L14.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </form>
-              </motion.div>
+              </FadeUp>
 
-              {/* Quick Action Buttons */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.6 }}
-                className="flex flex-wrap justify-center gap-3 sm:gap-6 px-4"
+              {/* Quick action chips */}
+              <FadeUp delay={stagger(6)}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {QUICK_ACTIONS.map((a) => (
+                    <button
+                      key={a.label}
+                      onClick={() => openChat(a.query)}
+                      className="quick-chip"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </FadeUp>
+
+              {/* Scroll hint — bottom of viewport */}
+              <FadeUp delay={stagger(7)}>
+                <div
+                  style={{
+                    marginTop: '4rem',
+                    paddingTop: '2rem',
+                    borderTop: '1px solid var(--border)',
+                  }}
+                >
+                  <span className="scroll-hint">
+                    <span className="scroll-hint-arrow" aria-hidden="true">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M6 1v10M6 11L2 7M6 11l4-4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    Currently building Avarieux Inc.
+                  </span>
+                </div>
+              </FadeUp>
+            </section>
+
+            {/* ── BELOW-THE-FOLD: brief section previews ── */}
+            <RevealSection>
+              <section
+                style={{
+                  maxWidth: '760px',
+                  margin: '0 auto',
+                  padding: '4rem 1.5rem 6rem',
+                  borderTop: '1px solid var(--border)',
+                }}
               >
-                {quickActions.map((action, index) => (
-                  <motion.button
-                    key={action.label}
-                    onClick={action.action}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 + index * 0.1 }}
-                    whileHover={{ scale: 1.08, y: -6 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="group relative flex flex-col items-center justify-center w-24 h-24 sm:w-28 sm:h-28 rounded-2xl"
-                  >
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-400/20 via-pink-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300"></div>
-                    <div className="relative w-full h-full rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/70 group-hover:border-purple-300/80 group-hover:bg-white/90 transition-all duration-300 shadow-lg group-hover:shadow-2xl group-hover:shadow-purple-500/20 flex flex-col items-center justify-center">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center mb-2 sm:mb-3 group-hover:from-purple-600 group-hover:to-pink-500 transition-all duration-300 shadow-md">
-                        <action.icon className="w-5 h-5 text-white" />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 transition-colors">
-                        {action.label}
-                      </span>
-                    </div>
-                  </motion.button>
-                ))}
-              </motion.div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '2.5rem',
+                  }}
+                >
+                  {[
+                    { href: '/work',     label: 'Work',     desc: 'Avarieux, four MCP servers, Papex, and a peer-reviewed IEEE publication.' },
+                    { href: '/speaking', label: 'Speaking', desc: 'Confirmed at NJIT BME Journal Club, May 27. Nine proposals under review.' },
+                    { href: '/about',    label: 'About',    desc: 'What I\'m building, how I got here, and the problems I keep returning to.' },
+                  ].map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-sans)',
+                          fontSize: '0.6875rem',
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: 'var(--accent)',
+                          marginBottom: '0.5rem',
+                        }}
+                      >
+                        {item.label}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-sans)',
+                          fontSize: '0.9375rem',
+                          lineHeight: 1.65,
+                          color: 'var(--muted)',
+                          marginBottom: 0,
+                          maxWidth: '38ch',
+                        }}
+                      >
+                        {item.desc}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            </RevealSection>
 
-              {/* Footer CTAs */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
-                className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-gray-500"
-              >
-                <a
-                  href="https://avarieux.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-900 transition-colors font-medium"
-                >
-                  avarieux.com &rarr;
-                </a>
-                <span className="text-gray-300">|</span>
-                <a
-                  href="mailto:yash@avarieux.com"
-                  className="hover:text-gray-900 transition-colors"
-                >
-                  yash@avarieux.com
-                </a>
-                <span className="text-gray-300">|</span>
-                <a
-                  href="https://linkedin.com/in/yash-kamlesh-shah"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-900 transition-colors"
-                >
-                  LinkedIn
-                </a>
-                <span className="text-gray-300">|</span>
-                <a
-                  href="https://github.com/ykshah1309"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-gray-900 transition-colors"
-                >
-                  GitHub
-                </a>
-              </motion.div>
-
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="chat"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="relative z-10"
-          >
-            <ChatInterface initialQuery={initialQuery} onBack={() => setShowChat(false)} />
           </motion.div>
         )}
       </AnimatePresence>
