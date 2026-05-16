@@ -1,43 +1,122 @@
 @import "tailwindcss";
 
-@layer base {
+/* ============================================================
+   AVARIEUX BRAND PALETTE — Phase 2A
+   ============================================================ */
+:root {
+  --background: #FAF8F3;
+  --foreground: #0A1628;
+  --accent:     #C9A961;
+  --muted:      #6B7280;
+  --border:     #E5E0D5;
+}
+
+@media (prefers-color-scheme: dark) {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    --background: #0A1628;
+    --foreground: #FAF8F3;
+    --accent:     #C9A961;
+    --muted:      #9CA3AF;
+    --border:     #1F2937;
   }
 }
 
+/* ============================================================
+   BASE RESET
+   ============================================================ */
 * {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
+/* ============================================================
+   BODY DEFAULTS — palette + Inter body type
+   ============================================================ */
 body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   width: 100%;
   min-height: 100vh;
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  background-color: var(--background);
+  color: var(--foreground);
+
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.7;
 }
 
-/* Fix for mobile scroll issues */
+@media (max-width: 640px) {
+  body {
+    font-size: 16px;
+  }
+}
+
 html, body {
   height: auto;
   min-height: 100%;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
 }
 
-body {
-  position: relative;
-  overflow-y: auto;
+/* ============================================================
+   EDITORIAL TYPOGRAPHY — Lora serif headlines
+   ============================================================ */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-lora), Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--foreground);
+  text-wrap: balance;
 }
 
-/* Custom Scrollbar Styling */
+h1 {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+p {
+  max-width: 70ch;
+  margin-bottom: 1.25rem;
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: opacity 150ms ease;
+}
+
+a:hover {
+  opacity: 0.75;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -50,14 +129,12 @@ body {
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
-  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.25);
 }
 
-/* Mobile specific scrollbar - make it slightly more visible */
 @media (max-width: 768px) {
   ::-webkit-scrollbar {
     width: 4px;
@@ -67,7 +144,6 @@ body {
   }
 }
 
-/* Dark mode support */
 @media (prefers-color-scheme: dark) {
   ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
@@ -77,7 +153,17 @@ body {
   }
 }
 
-/* Ensure the main container can scroll if needed */
+/* ============================================================
+   UTILITY
+   ============================================================ */
 main {
   overflow-x: hidden;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
