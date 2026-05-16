@@ -37,6 +37,8 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Keyed refs for each project card — used to scroll focused card into view.
+  const cardRefs = useRef<Partial<Record<ProjectId, HTMLDivElement | null>>>({});
 
   useEffect(() => {
     const welcome = "Ask me anything about Yash's work, Avarieux, the MCP servers, or what he's building.";
@@ -51,6 +53,17 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  // When hoveredProject changes and the panel is open, scroll that card into view.
+  useEffect(() => {
+    if (showProjects && hoveredProject) {
+      const el = cardRefs.current[hoveredProject];
+      if (el) {
+        // Small delay so AnimatePresence expansion has started before we scroll.
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+      }
+    }
+  }, [hoveredProject, showProjects]);
 
   // ============ HANDLERS ============
 
@@ -97,7 +110,18 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
       setIsTyping(false);
       addMessage('assistant', response.text, response.source);
       if (!globalMute) speechController.speak(response.text);
-      if (response.action?.type === 'SHOW_PROJECTS') setShowProjects(true);
+
+      if (response.action?.type === 'SHOW_PROJECTS') {
+        // Open the panel unconditionally.
+        setShowProjects(true);
+        // If a specific project was identified in the response text, auto-expand
+        // it — but only if it differs from the currently expanded card to avoid
+        // redundant re-renders when the user asks about the same project twice.
+        const focused = response.action.focusedProject as ProjectId | undefined;
+        if (focused && focused !== hoveredProject) {
+          setHoveredProject(focused);
+        }
+      }
     } catch {
       setIsTyping(false);
       setApiStatus('fallback');
@@ -353,6 +377,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                   return (
                     <div
                       key={id}
+                      ref={(el) => { cardRefs.current[id] = el; }}
                       className="relative"
                       onMouseEnter={() => handleProjectHover(id)}
                       onMouseLeave={() => handleProjectHover(null)}
