@@ -1,36 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Briefcase, GraduationCap, Mail, FileText, User, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Building2, Layers, Mic2, Mail, BookOpen } from 'lucide-react';
 import ChatInterface from './ChatInterface';
-import FluidBackground from './FluidBackground';
-import LinkedInPosts from './LinkedInPosts';
 
 export default function LandingPage() {
   const [showChat, setShowChat] = useState(false);
   const [initialQuery, setInitialQuery] = useState('');
-  const [showScrollButtons, setShowScrollButtons] = useState(false);
-
-  useEffect(() => {
-    const checkScroll = () => {
-      const isMobile = window.innerWidth < 768;
-      const hasScroll = document.documentElement.scrollHeight > window.innerHeight;
-      setShowScrollButtons(isMobile && hasScroll);
-    };
-
-    checkScroll();
-    window.addEventListener('resize', checkScroll);
-    window.addEventListener('scroll', checkScroll);
-    return () => {
-      window.removeEventListener('resize', checkScroll);
-      window.removeEventListener('scroll', checkScroll);
-    };
-  }, []);
-
-  const scrollBy = (amount: number) => {
-    window.scrollBy({ top: amount, behavior: 'smooth' });
-  };
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,11 +20,11 @@ export default function LandingPage() {
   };
 
   const quickActions = [
-    { icon: User, label: 'Me', action: () => handleQuickAction('Tell me about yourself') },
-    { icon: Briefcase, label: 'Projects', action: () => handleQuickAction('Show me your projects') },
-    { icon: GraduationCap, label: 'Skills', action: () => handleQuickAction('What are your skills?') },
-    { icon: Mail, label: 'Contact', action: () => handleQuickAction('How can I contact you?') },
-    { icon: FileText, label: 'Resume', action: () => handleQuickAction('Show me your resume') },
+    { icon: Building2, label: 'Avarieux',  action: () => handleQuickAction('What is Avarieux?') },
+    { icon: Layers,    label: 'MCP Work',  action: () => handleQuickAction('Tell me about the MCP servers') },
+    { icon: Mic2,      label: 'Speaking',  action: () => handleQuickAction('What talks is Yash giving?') },
+    { icon: Mail,      label: 'Contact',   action: () => handleQuickAction('How can I reach Yash?') },
+    { icon: BookOpen,  label: 'Research',  action: () => handleQuickAction('Tell me about the IEEE publication') },
   ];
 
   const handleQuickAction = (query: string) => {
@@ -57,35 +34,6 @@ export default function LandingPage() {
 
   return (
     <>
-      <FluidBackground />
-      
-      {/* Vertical Scroll Buttons for Mobile */}
-      <AnimatePresence>
-        {showScrollButtons && !showChat && (
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="fixed right-4 bottom-24 z-[100] flex flex-col gap-3 md:hidden"
-          >
-            <button
-              onClick={() => scrollBy(-300)}
-              className="p-3 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg text-gray-800 active:scale-95 transition-all"
-              aria-label="Scroll Up"
-            >
-              <ChevronUp className="w-6 h-6" />
-            </button>
-            <button
-              onClick={() => scrollBy(300)}
-              className="p-3 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg text-gray-800 active:scale-95 transition-all"
-              aria-label="Scroll Down"
-            >
-              <ChevronDown className="w-6 h-6" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <AnimatePresence mode="wait">
         {!showChat ? (
           <motion.div
@@ -97,6 +45,7 @@ export default function LandingPage() {
             className="relative z-10 min-h-screen flex items-center justify-center px-4"
           >
             <div className="w-full max-w-4xl mx-auto text-center py-12">
+
               {/* Hero Section */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -104,14 +53,18 @@ export default function LandingPage() {
                 transition={{ delay: 0.2, duration: 0.6 }}
               >
                 <p className="text-gray-600 text-lg mb-2">
-                  Hello there, old sport. The name's <span className="text-gray-900 font-medium">Yash Shah</span>
+                  Hello there, old sport. The name&rsquo;s{' '}
+                  <span className="text-gray-900 font-medium">Yash Shah</span>.
                 </p>
-                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-600 bg-clip-text text-transparent px-2">
-                  AI/ML Engineer & Data Scientist
+                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-600 bg-clip-text text-transparent px-2">
+                  Founder &amp; CEO, Avarieux Inc.
                 </h1>
+                <p className="text-gray-500 text-lg sm:text-xl max-w-2xl mx-auto px-4">
+                  Building citation infrastructure for AI in financial research.
+                </p>
               </motion.div>
 
-              {/* Avatar with Profile Image */}
+              {/* Avatar */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -119,22 +72,16 @@ export default function LandingPage() {
                 className="my-12"
               >
                 <div className="relative w-32 h-32 sm:w-40 sm:h-40 mx-auto">
-                  {/* Iridescent glow ring */}
                   <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 opacity-70 blur-lg animate-pulse"></div>
-                  
-                  {/* Gradient border */}
                   <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 p-1">
                     <div className="relative w-full h-full bg-white rounded-full flex items-center justify-center shadow-2xl overflow-hidden border-4 border-white/90 backdrop-blur-sm">
-                      {/* Profile Image - Replace '/profile.jpg' with your actual image path */}
-                      <img 
-                        src="/Profile_Pic.jpeg" // Change this to your image path
+                      <img
+                        src="/Profile_Pic.jpeg"
                         alt="Yash Shah"
                         className="w-full h-full object-cover rounded-full"
                         onError={(e) => {
-                          // Fallback to initials if image fails to load
                           const target = e.currentTarget as HTMLImageElement;
                           target.style.display = 'none';
-                          // Create fallback div with initials
                           const fallbackDiv = document.createElement('div');
                           fallbackDiv.className = 'w-full h-full bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center rounded-full';
                           fallbackDiv.innerHTML = '<span class="text-4xl font-bold text-gray-800">YS</span>';
@@ -146,7 +93,33 @@ export default function LandingPage() {
                 </div>
               </motion.div>
 
-              {/* Search Bar with Glassmorphism */}
+              {/* Opening paragraph */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                className="max-w-2xl mx-auto mb-10 px-4"
+              >
+                <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                  I&rsquo;m building{' '}
+                  <a
+                    href="https://avarieux.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-900 font-medium underline underline-offset-2 hover:text-gray-700 transition-colors"
+                  >
+                    Avarieux
+                  </a>
+                  {' '}&mdash; a multi-source AI research platform for self-directed investors and registered investment advisors.
+                  The premise is simple but uncommon: every numeric claim is audited against its source before delivery,
+                  and every analysis is archived as a permanent, citable URL.
+                  I&rsquo;m also a Founding Engineer at{' '}
+                  <span className="text-gray-900 font-medium">Papex</span>, a NYC fintech,
+                  and I&rsquo;ve spent the past year building open-source infrastructure for the MCP ecosystem.
+                </p>
+              </motion.div>
+
+              {/* Search / Ask Bar */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -157,19 +130,20 @@ export default function LandingPage() {
                   <input
                     type="text"
                     name="search"
-                    placeholder="What do you want to know, old sport?"
+                    placeholder="Ask me anything about Avarieux, the MCP work, or the research..."
                     className="w-full px-5 py-3 sm:px-6 sm:py-4 pr-14 rounded-full bg-white/80 backdrop-blur-xl border border-gray-200/60 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all shadow-2xl text-base sm:text-lg"
                   />
                   <button
                     type="submit"
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white flex items-center justify-center hover:scale-110 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg hover:shadow-purple-500/30"
+                    aria-label="Ask"
                   >
-                    <Mic className="w-5 h-5" />
+                    <Search className="w-5 h-5" />
                   </button>
                 </form>
               </motion.div>
 
-              {/* Improved Quick Action Buttons */}
+              {/* Quick Action Buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -183,56 +157,65 @@ export default function LandingPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8 + index * 0.1 }}
-                    whileHover={{ 
-                      scale: 1.08, 
-                      y: -6,
-                      rotate: [0, -2, 2, -2, 0]
-                    }}
+                    whileHover={{ scale: 1.08, y: -6 }}
                     whileTap={{ scale: 0.95 }}
                     className="group relative flex flex-col items-center justify-center w-24 h-24 sm:w-28 sm:h-28 rounded-2xl"
                   >
-                    {/* Glow effect on hover */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-400/20 via-pink-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300"></div>
-                    
-                    {/* Main button */}
                     <div className="relative w-full h-full rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/70 group-hover:border-purple-300/80 group-hover:bg-white/90 transition-all duration-300 shadow-lg group-hover:shadow-2xl group-hover:shadow-purple-500/20 flex flex-col items-center justify-center">
-                      
-                      {/* Icon container with gradient background */}
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center mb-2 sm:mb-3 group-hover:from-purple-600 group-hover:to-pink-500 transition-all duration-300 shadow-md">
                         <action.icon className="w-5 h-5 text-white" />
                       </div>
-                      
                       <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 transition-colors">
                         {action.label}
                       </span>
-                      
-                      {/* Subtle indicator dot */}
-                      <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
                   </motion.button>
                 ))}
               </motion.div>
 
-              {/* Subtle hint text */}
+              {/* Footer CTAs */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2, duration: 0.6 }}
-                className="mt-12"
+                className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-gray-500"
               >
-                <p className="text-gray-500 text-sm italic">
-                  Click any button above or type your question to begin...
-                </p>
+                <a
+                  href="https://avarieux.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-gray-900 transition-colors font-medium"
+                >
+                  avarieux.com &rarr;
+                </a>
+                <span className="text-gray-300">|</span>
+                <a
+                  href="mailto:yash@avarieux.com"
+                  className="hover:text-gray-900 transition-colors"
+                >
+                  yash@avarieux.com
+                </a>
+                <span className="text-gray-300">|</span>
+                <a
+                  href="https://linkedin.com/in/yash-kamlesh-shah"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-gray-900 transition-colors"
+                >
+                  LinkedIn
+                </a>
+                <span className="text-gray-300">|</span>
+                <a
+                  href="https://github.com/ykshah1309"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-gray-900 transition-colors"
+                >
+                  GitHub
+                </a>
               </motion.div>
 
-              {/* LinkedIn Posts Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.4, duration: 0.8 }}
-              >
-                <LinkedInPosts />
-              </motion.div>
             </div>
           </motion.div>
         ) : (
