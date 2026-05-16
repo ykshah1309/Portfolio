@@ -3,13 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Mic, User, Briefcase, GraduationCap, Mail, FileText, 
-  ArrowLeft, Github, X, Volume2, VolumeX, ChevronRight,
-  Loader2, ExternalLink
+  Mic, User, Briefcase, Mail, ArrowLeft, Github, X, Volume2, VolumeX, ChevronRight,
+  Loader2, ExternalLink, MessageSquare, Presentation
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import FluidBackground from '../components/FluidBackground';
 import { 
   generateResponse, 
   speechController, 
@@ -48,7 +46,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
   // Initialize with welcome message
   useEffect(() => {
-    const welcome = "Hello! 👋 I'm Portfolio AI, Yash's virtual assistant. Ask me about his projects, skills, or experience!";
+    const welcome = "Ask me anything about Yash's work, Avarieux, the MCP servers, or what he's building.";
     addMessage('assistant', welcome, 'pattern');
     if (!globalMute) speechController.speak(welcome);
 
@@ -90,12 +88,10 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
     if (!msg) return;
 
     if (msg.isMuted) {
-      // Unmuting - speak the message
       if (!globalMute) {
         speechController.speak(msg.content);
       }
     } else {
-      // Muting - stop speech
       speechController.stop();
     }
 
@@ -122,12 +118,10 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
       setIsTyping(false);
       addMessage('assistant', response.text, response.source);
       
-      // Speak if not globally muted
       if (!globalMute) {
         speechController.speak(response.text);
       }
 
-      // Handle actions
       if (response.action?.type === 'SHOW_PROJECTS') {
         setShowProjects(true);
       }
@@ -169,30 +163,28 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
   // Projects quick action
   const handleProjectsClick = () => {
     setShowProjects(true);
-    const text = `Yash has built ${Object.keys(PROJECTS).length} impressive projects! Hover over any project to see a preview and hear about it.`;
+    const text = `Here's a look at Yash's work — Avarieux, the four MCP servers, Papex, and his IEEE publication. Hover over any item to hear more.`;
     addMessage('assistant', text, 'pattern');
     if (!globalMute) speechController.speak(text);
   };
 
-  // Quick actions
+  // Quick actions — founder-positioned, matches LandingPage chip set
   const quickActions = [
-    { icon: User, label: 'About', action: () => handleSend('Tell me about Yash') },
-    { icon: Briefcase, label: 'Projects', action: handleProjectsClick },
-    { icon: GraduationCap, label: 'Skills', action: () => handleSend('What are your skills?') },
-    { icon: Mail, label: 'Contact', action: () => handleSend('How can I contact you?') },
-    { icon: FileText, label: 'Resume', action: () => window.open('/Yash Shah Resume.pdf', '_blank') },
+    { icon: MessageSquare, label: 'Avarieux',  action: () => handleSend('Tell me about Avarieux') },
+    { icon: Briefcase,     label: 'MCP Work',  action: () => handleSend('What are the MCP servers?') },
+    { icon: Presentation,  label: 'Speaking',  action: () => handleSend('What is Yash speaking about?') },
+    { icon: User,          label: 'About',     action: () => handleSend('Tell me about Yash') },
+    { icon: Mail,          label: 'Contact',   action: () => handleSend('How do I reach Yash?') },
   ];
 
   // ============ RENDER ============
   return (
     <div className="fixed inset-0 z-50 flex h-screen overflow-hidden bg-transparent">
-      {/* Fluid Background - FADED for chat */}
-      <FluidBackground faded={true} />
       
       {/* Main Chat Area */}
       <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${showProjects ? 'hidden md:flex md:w-1/2' : 'w-full'}`}>
         
-        {/* Header - Semi-transparent */}
+        {/* Header */}
         <header className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-200/50">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={handleBack} className="hover:bg-gray-100/50">
@@ -230,7 +222,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
           </Button>
         </header>
 
-        {/* Messages - Semi-transparent background */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50/30 backdrop-blur-[2px]">
           <div className="max-w-2xl mx-auto space-y-4">
             {messages.map((msg) => (
@@ -252,7 +244,6 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                   {/* Per-message controls (only for assistant) */}
                   {msg.role === 'assistant' && (
                     <div className="flex items-center gap-2 mt-1 px-1">
-                      {/* Mute/Speak toggle button */}
                       <button
                         onClick={() => toggleMessageMute(msg.id)}
                         className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors ${
@@ -269,7 +260,6 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                         )}
                       </button>
                       
-                      {/* Source indicator */}
                       <span className="text-xs text-gray-400">
                         {msg.source === 'api' && '🤖 AI'}
                         {msg.source === 'fallback' && '📚 Local'}
@@ -304,9 +294,9 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
           </div>
         </div>
 
-        {/* Quick Actions - Semi-transparent */}
+        {/* Quick Actions */}
         <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
-            <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto no-scrollbar">
+          <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto no-scrollbar">
             {quickActions.map((action, i) => (
               <Button 
                 key={i} 
@@ -322,14 +312,14 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
           </div>
         </div>
 
-        {/* Input - Semi-transparent */}
+        {/* Input */}
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
           <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="max-w-2xl mx-auto flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about projects, skills, experience..."
+              placeholder="Ask about Avarieux, the MCP work, speaking, or anything else."
               className="flex-1 px-4 py-2 rounded-full border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
               disabled={isTyping}
             />
@@ -368,16 +358,16 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
             {/* Panel Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200/50 bg-gray-50/80">
               <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="md:hidden"
-                onClick={() => setShowProjects(false)}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h2 className="font-bold text-lg">Projects & Experience</h2>
-            </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="md:hidden"
+                  onClick={() => setShowProjects(false)}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="font-bold text-lg">Work & Projects</h2>
+              </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -405,8 +395,8 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
                     <div 
                       onClick={() => setHoveredProject(hoveredProject === id ? null : id as ProjectId)}
                       className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
-	                      hoveredProject === id ? 'border-gray-900 shadow-md' : 'hover:border-gray-400'
-	                    }`}>
+                        hoveredProject === id ? 'border-gray-900 shadow-md' : 'hover:border-gray-400'
+                      }`}>
                       <h3 className="font-semibold">{project.title}</h3>
                       <p className="text-sm text-gray-500">{project.subtitle}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
