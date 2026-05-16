@@ -2,26 +2,21 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Mic, User, Briefcase, Mail, ArrowLeft, Github, X, Volume2, VolumeX, ChevronRight,
-  Loader2, ExternalLink, MessageSquare, Presentation
+  Loader2, ExternalLink, MessageSquare, Presentation, BarChart2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  generateResponse, 
-  speechController, 
-  PROJECTS, 
-  ProjectId,
-  AIResponse 
-} from '../../lib/ai-assistant';
+import { generateResponse, speechController, AIResponse } from '../../lib/ai-assistant';
+import { PROJECTS, PROJECT_ORDER, type ProjectId, type Project } from '../../lib/projects-data';
 
 // ============ TYPES ============
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  source?: 'api' | 'fallback' | 'pattern' | 'security' | 'mess';
+  source?: AIResponse['source'];
   isMuted?: boolean;
 }
 
@@ -32,7 +27,6 @@ interface ChatInterfaceProps {
 
 // ============ MAIN COMPONENT ============
 export default function ChatInterface({ onBack, initialQuery }: ChatInterfaceProps) {
-  // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -40,99 +34,77 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
   const [showProjects, setShowProjects] = useState(false);
   const [hoveredProject, setHoveredProject] = useState<ProjectId | null>(null);
   const [apiStatus, setApiStatus] = useState<'idle' | 'calling' | 'success' | 'fallback'>('idle');
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize with welcome message
   useEffect(() => {
     const welcome = "Ask me anything about Yash's work, Avarieux, the MCP servers, or what he's building.";
     addMessage('assistant', welcome, 'pattern');
     if (!globalMute) speechController.speak(welcome);
-
-    // Send initial query if provided
     if (initialQuery.trim()) {
-      setTimeout(() => {
-        handleSend(initialQuery);
-      }, 500);
+      setTimeout(() => handleSend(initialQuery), 500);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
   // ============ HANDLERS ============
-  
-  // Handle back button - STOP SPEECH IMMEDIATELY
+
   const handleBack = () => {
     speechController.stop();
     onBack();
   };
 
-  // Add message helper
-  const addMessage = (role: 'user' | 'assistant', content: string, source?: AIResponse['source']) => {
+  const addMessage = (
+    role: 'user' | 'assistant',
+    content: string,
+    source?: AIResponse['source']
+  ) => {
     setMessages(prev => [...prev, {
       id: Math.random().toString(36).slice(2),
       role,
       content,
       source,
-      isMuted: false
+      isMuted: false,
     }]);
   };
 
-  // Toggle mute for specific message
   const toggleMessageMute = (id: string) => {
     const msg = messages.find(m => m.id === id);
     if (!msg) return;
-
     if (msg.isMuted) {
-      if (!globalMute) {
-        speechController.speak(msg.content);
-      }
+      if (!globalMute) speechController.speak(msg.content);
     } else {
       speechController.stop();
     }
-
-    setMessages(prev => prev.map(m => 
-      m.id === id ? { ...m, isMuted: !m.isMuted } : m
-    ));
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, isMuted: !m.isMuted } : m));
   };
 
-  // Send message
   const handleSend = async (text: string) => {
     if (!text.trim() || isTyping) return;
-    
     addMessage('user', text);
     setInput('');
     setIsTyping(true);
     setApiStatus('calling');
-
     try {
       const response = await generateResponse(text);
-      
       setApiStatus(response.source === 'api' ? 'success' : 'fallback');
       setTimeout(() => setApiStatus('idle'), 3000);
-      
       setIsTyping(false);
       addMessage('assistant', response.text, response.source);
-      
-      if (!globalMute) {
-        speechController.speak(response.text);
-      }
-
-      if (response.action?.type === 'SHOW_PROJECTS') {
-        setShowProjects(true);
-      }
-    } catch (err) {
+      if (!globalMute) speechController.speak(response.text);
+      if (response.action?.type === 'SHOW_PROJECTS') setShowProjects(true);
+    } catch {
       setIsTyping(false);
       setApiStatus('fallback');
       addMessage('assistant', "Sorry, something went wrong. Try again!", 'fallback');
     }
   };
 
-  // Voice input
   const handleMic = () => {
     speechController.listen((text) => {
       setInput(text);
@@ -140,18 +112,17 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
     });
   };
 
-  // Project hover - show thumbnail and speak
+  // On hover, speak the project description (replaces old aiSummary TTS)
   const handleProjectHover = (projectId: ProjectId | null) => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (projectId) {
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredProject(projectId);
         if (!globalMute) {
           const project = PROJECTS[projectId];
-          speechController.speak(project.aiSummary);
+          // Speak a concise version: title + subtitle + first sentence of description
+          const firstSentence = project.description.split('.')[0];
+          speechController.speak(`${project.title}. ${project.subtitle}. ${firstSentence}.`);
         }
       }, 300);
     } else {
@@ -160,15 +131,13 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
     }
   };
 
-  // Projects quick action
   const handleProjectsClick = () => {
     setShowProjects(true);
-    const text = `Here's a look at Yash's work — Avarieux, the four MCP servers, Papex, and his IEEE publication. Hover over any item to hear more.`;
+    const text = `Here's a look at Yash's work — Avarieux, the four MCP servers, Papex, and his IEEE publication. Click any item to expand it.`;
     addMessage('assistant', text, 'pattern');
     if (!globalMute) speechController.speak(text);
   };
 
-  // Quick actions — founder-positioned, matches LandingPage chip set
   const quickActions = [
     { icon: MessageSquare, label: 'Avarieux',  action: () => handleSend('Tell me about Avarieux') },
     { icon: Briefcase,     label: 'MCP Work',  action: () => handleSend('What are the MCP servers?') },
@@ -180,10 +149,12 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
   // ============ RENDER ============
   return (
     <div className="fixed inset-0 z-50 flex h-screen overflow-hidden bg-transparent">
-      
+
       {/* Main Chat Area */}
-      <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${showProjects ? 'hidden md:flex md:w-1/2' : 'w-full'}`}>
-        
+      <div className={`relative z-10 flex flex-col h-full transition-all duration-300 ${
+        showProjects ? 'hidden md:flex md:w-1/2' : 'w-full'
+      }`}>
+
         {/* Header */}
         <header className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-200/50">
           <div className="flex items-center gap-3">
@@ -207,15 +178,10 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
               </div>
             </div>
           </div>
-          
-          {/* Global mute toggle */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => {
-              if (!globalMute) speechController.stop();
-              setGlobalMute(!globalMute);
-            }}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { if (!globalMute) speechController.stop(); setGlobalMute(!globalMute); }}
             className="hover:bg-gray-100/50"
           >
             {globalMute ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -234,46 +200,40 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
               >
                 <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-2' : ''}`}>
                   <div className={`p-3 rounded-2xl ${
-                    msg.role === 'user' 
-                      ? 'bg-gray-900 text-white' 
+                    msg.role === 'user'
+                      ? 'bg-gray-900 text-white'
                       : 'bg-white/90 backdrop-blur-sm border border-gray-200/50 shadow-sm'
                   }`}>
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   </div>
-                  
-                  {/* Per-message controls (only for assistant) */}
                   {msg.role === 'assistant' && (
                     <div className="flex items-center gap-2 mt-1 px-1">
                       <button
                         onClick={() => toggleMessageMute(msg.id)}
                         className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors ${
-                          msg.isMuted 
-                            ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100' 
+                          msg.isMuted
+                            ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                             : 'text-blue-500 hover:text-blue-700 hover:bg-blue-50'
                         }`}
                         title={msg.isMuted ? 'Click to hear this message' : 'Click to stop/mute'}
                       >
-                        {msg.isMuted ? (
-                          <><VolumeX className="w-3 h-3" /> Muted</>
-                        ) : (
-                          <><Volume2 className="w-3 h-3" /> Speak</>
-                        )}
+                        {msg.isMuted
+                          ? <><VolumeX className="w-3 h-3" /> Muted</>
+                          : <><Volume2 className="w-3 h-3" /> Speak</>
+                        }
                       </button>
-                      
                       <span className="text-xs text-gray-400">
-                        {msg.source === 'api' && '🤖 AI'}
+                        {msg.source === 'api'      && '🤖 AI'}
                         {msg.source === 'fallback' && '📚 Local'}
-                        {msg.source === 'pattern' && '💬 Quick'}
+                        {msg.source === 'pattern'  && '💬 Quick'}
                         {msg.source === 'security' && '🛡️ Security'}
-                        {msg.source === 'mess' && '🧹 Mess'}
+                        {msg.source === 'mess'     && '🧹 Mess'}
                       </span>
                     </div>
                   )}
                 </div>
               </motion.div>
             ))}
-
-            {/* Typing indicator */}
             {isTyping && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
                 <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 p-3 rounded-2xl shadow-sm">
@@ -298,11 +258,11 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
         <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
           <div className="flex gap-2 overflow-x-auto max-w-2xl mx-auto no-scrollbar">
             {quickActions.map((action, i) => (
-              <Button 
-                key={i} 
-                variant="outline" 
-                size="sm" 
-                onClick={action.action} 
+              <Button
+                key={i}
+                variant="outline"
+                size="sm"
+                onClick={action.action}
                 className="whitespace-nowrap bg-white/50 hover:bg-white/80"
               >
                 <action.icon className="w-4 h-4 mr-1" />
@@ -314,7 +274,10 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
 
         {/* Input */}
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
-          <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="max-w-2xl mx-auto flex gap-2">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSend(input); }}
+            className="max-w-2xl mx-auto flex gap-2"
+          >
             <input
               type="text"
               value={input}
@@ -323,20 +286,20 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
               className="flex-1 px-4 py-2 rounded-full border border-gray-200 bg-white/90 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
               disabled={isTyping}
             />
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="icon" 
-              onClick={handleMic} 
-              disabled={isTyping} 
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleMic}
+              disabled={isTyping}
               className="rounded-full bg-white/50 hover:bg-white/80"
             >
               <Mic className="w-4 h-4" />
             </Button>
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={isTyping || !input.trim()} 
+            <Button
+              type="submit"
+              size="icon"
+              disabled={isTyping || !input.trim()}
               className="rounded-full bg-gray-900 hover:bg-gray-800"
             >
               <ChevronRight className="w-4 h-4" />
@@ -345,7 +308,7 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
         </div>
       </div>
 
-      {/* Projects Side Panel */}
+      {/* ============ PROJECTS SIDE PANEL ============ */}
       <AnimatePresence>
         {showProjects && (
           <motion.div
@@ -358,19 +321,19 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
             {/* Panel Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200/50 bg-gray-50/80">
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="md:hidden"
                   onClick={() => setShowProjects(false)}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <h2 className="font-bold text-lg">Work & Projects</h2>
+                <h2 className="font-bold text-lg">Work &amp; Projects</h2>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => {
                   setShowProjects(false);
                   setHoveredProject(null);
@@ -384,84 +347,97 @@ export default function ChatInterface({ onBack, initialQuery }: ChatInterfacePro
             {/* Projects List */}
             <div className="h-[calc(100%-60px)] overflow-y-auto p-4">
               <div className="space-y-3">
-                {Object.entries(PROJECTS).map(([id, project]) => (
-                  <div
-                    key={id}
-                    className="relative"
-                    onMouseEnter={() => handleProjectHover(id as ProjectId)}
-                    onMouseLeave={() => handleProjectHover(null)}
-                  >
-                    {/* Project Card */}
-                    <div 
-                      onClick={() => setHoveredProject(hoveredProject === id ? null : id as ProjectId)}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
-                        hoveredProject === id ? 'border-gray-900 shadow-md' : 'hover:border-gray-400'
-                      }`}>
-                      <h3 className="font-semibold">{project.title}</h3>
-                      <p className="text-sm text-gray-500">{project.subtitle}</p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {project.tags.slice(0, 3).map((tag, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-gray-100 text-xs rounded-full">
-                            {tag}
-                          </span>
-                        ))}
+                {PROJECT_ORDER.map((id) => {
+                  const project: Project = PROJECTS[id];
+                  const isExpanded = hoveredProject === id;
+                  return (
+                    <div
+                      key={id}
+                      className="relative"
+                      onMouseEnter={() => handleProjectHover(id)}
+                      onMouseLeave={() => handleProjectHover(null)}
+                    >
+                      {/* Project Card */}
+                      <div
+                        onClick={() =>
+                          setHoveredProject(isExpanded ? null : id)
+                        }
+                        className={`p-4 border rounded-lg cursor-pointer transition-all bg-white ${
+                          isExpanded
+                            ? 'border-gray-900 shadow-md'
+                            : 'border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        <h3 className="font-semibold text-sm">{project.title}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{project.subtitle}</p>
+
+                        {/* Stats row (if present) */}
+                        {project.stats && project.stats.length > 0 && (
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                            {project.stats.map((stat, i) => (
+                              <span key={i} className="flex items-center gap-1 text-xs text-gray-500">
+                                <BarChart2 className="w-3 h-3 text-gray-400" />
+                                <span className="font-medium text-gray-700">{stat.value}</span>
+                                <span>{stat.label}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
+
+                      {/* Expanded Detail Panel */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-2 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                              {/* Description */}
+                              <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                                {project.description}
+                              </p>
+
+                              {/* Stats detail (if present) */}
+                              {project.stats && project.stats.length > 0 && (
+                                <div className="flex flex-wrap gap-3 mb-3">
+                                  {project.stats.map((stat, i) => (
+                                    <div key={i} className="bg-white border border-gray-200 rounded px-2 py-1">
+                                      <p className="text-xs text-gray-500">{stat.label}</p>
+                                      <p className="text-sm font-semibold text-gray-900">{stat.value}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Links */}
+                              {project.links.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {project.links.map((link, i) => (
+                                    <Button
+                                      key={i}
+                                      size="sm"
+                                      variant={i === 0 ? 'default' : 'outline'}
+                                      onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
+                                      className={i === 0 ? 'bg-gray-900 hover:bg-gray-800' : ''}
+                                    >
+                                      {link.label === 'GitHub' && <Github className="w-3 h-3 mr-1" />}
+                                      {link.label !== 'GitHub' && <ExternalLink className="w-3 h-3 mr-1" />}
+                                      {link.label}
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-
-                    {/* Hover Preview Tooltip */}
-                    <AnimatePresence>
-                      {hoveredProject === id && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                          className="absolute left-0 right-0 mt-2 p-4 bg-white border rounded-xl shadow-2xl z-50 md:relative md:mt-4"
-                        >
-                          {/* Video Thumbnail */}
-                          <div className="aspect-video bg-gray-900 rounded-lg mb-3 overflow-hidden relative">
-                            <iframe
-                              src={`${project.videoUrl.replace('watch?v=', 'embed/')}?autoplay=1&mute=1`}
-                              className="w-full h-full"
-                              allow="autoplay"
-                              title={project.title}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                          </div>
-
-                          {/* Description */}
-                          <p className="text-sm text-gray-700 mb-3">{project.description}</p>
-
-                          {/* AI Summary */}
-                          <div className="p-2 bg-gray-50 rounded-lg mb-3">
-                            <p className="text-xs text-gray-600 flex items-start gap-2">
-                              <span className="text-lg">🤖</span>
-                              <span>{project.aiSummary}</span>
-                            </p>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(project.repoUrl, '_blank')}
-                              className="flex-1"
-                            >
-                              <Github className="w-4 h-4 mr-1" /> GitHub
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => window.open(project.videoUrl, '_blank')}
-                              className="flex-1"
-                            >
-                              <ExternalLink className="w-4 h-4 mr-1" /> Demo
-                            </Button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </motion.div>
