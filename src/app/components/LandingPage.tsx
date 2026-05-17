@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import ChatInterface from './ChatInterface';
+import ProjectsPanel from './ProjectsPanel';
 import Nav from './Nav';
 import Image from 'next/image';
+import type { ProjectId } from '../../lib/projects-data';
 
 // Motion helpers — all durations respect prefers-reduced-motion via the hook.
 const stagger = (i: number, base = 0.08) => i * base;
@@ -66,6 +68,9 @@ export default function LandingPage() {
   const [showChat, setShowChat] = useState(false);
   const [initialQuery, setInitialQuery] = useState('');
   const [inputValue, setInputValue] = useState('');
+  const [showProjects, setShowProjects] = useState(false);
+  const [hoveredProject, setHoveredProject] = useState<ProjectId | null>(null);
+  const [globalMute, setGlobalMute] = useState(false);
 
   const openChat = (query: string) => {
     setInitialQuery(query);
@@ -77,11 +82,18 @@ export default function LandingPage() {
     if (inputValue.trim()) openChat(inputValue.trim());
   };
 
+  const triggerProjects = (focused?: ProjectId) => {
+    setShowProjects(true);
+    if (focused && focused !== hoveredProject) {
+      setHoveredProject(focused);
+    }
+  };
+
   return (
     <>
       <div
         className={`transition-[padding-right] duration-[350ms] ease-out ${
-          showChat ? 'lg:pr-[42%]' : ''
+          showChat || showProjects ? 'lg:pr-[42%]' : ''
         }`}
       >
         <Nav />
@@ -360,10 +372,24 @@ export default function LandingPage() {
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
             className="fixed inset-y-0 right-0 z-40 w-full lg:w-[42%]"
           >
-            <ChatInterface initialQuery={initialQuery} onBack={() => setShowChat(false)} />
+            <ChatInterface
+              initialQuery={initialQuery}
+              onBack={() => setShowChat(false)}
+              onTriggerProjects={triggerProjects}
+              globalMute={globalMute}
+              setGlobalMute={setGlobalMute}
+            />
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ProjectsPanel
+        isOpen={showProjects}
+        hoveredProject={hoveredProject}
+        setHoveredProject={setHoveredProject}
+        onClose={() => setShowProjects(false)}
+        globalMute={globalMute}
+      />
     </>
   );
 }

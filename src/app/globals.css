@@ -81,44 +81,50 @@ body {
 
 /* ============================================================
    TYPOGRAPHY
+   Wrapped in @layer base so Tailwind utility classes (text-sm,
+   font-bold, etc.) on raw <h1>/<h2>/<p> elements take precedence.
+   Page-level classes (.hero-headline, .work-title) continue to
+   work normally since they're unlayered and beat both.
    ============================================================ */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  line-height: 1.15;
-  color: var(--foreground);
-  text-wrap: balance;
-}
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    line-height: 1.15;
+    color: var(--foreground);
+    text-wrap: balance;
+  }
 
-h1 {
-  font-size: clamp(2.25rem, 5vw, 3.5rem);
-  line-height: 1.1;
-}
+  h1 {
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    line-height: 1.1;
+  }
 
-h2 {
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
-  line-height: 1.25;
-}
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    line-height: 1.25;
+  }
 
-h3 {
-  font-size: 1.25rem;
-  line-height: 1.35;
-}
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
 
-p {
-  max-width: 70ch;
-  margin-bottom: 1.25rem;
-  text-wrap: pretty;
-}
+  p {
+    max-width: 70ch;
+    margin-bottom: 1.25rem;
+    text-wrap: pretty;
+  }
 
-a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  transition: opacity 150ms ease;
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: opacity 150ms ease;
+  }
+  a:hover { opacity: 0.75; }
 }
-a:hover { opacity: 0.75; }
 
 /* Focus ring — accent-colored, consistent everywhere */
 :focus-visible {
