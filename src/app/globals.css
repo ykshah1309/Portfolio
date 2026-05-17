@@ -472,6 +472,9 @@ a:hover { opacity: 0.75; }
    CHAT INTERFACE — Phase 2B restyled
    ============================================================ */
 .chat-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background-color: var(--background-subtle);
   border-left: 1px solid var(--border);
 }
@@ -482,6 +485,9 @@ a:hover { opacity: 0.75; }
 }
 
 .chat-messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 1.25rem;
   background-color: transparent;
 }
 

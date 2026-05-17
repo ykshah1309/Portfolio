@@ -79,27 +79,12 @@ export default function LandingPage() {
 
   return (
     <>
-      <AnimatePresence mode="wait">
-        {showChat ? (
-          <motion.div
-            key="chat"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 50 }}
-          >
-            <ChatInterface initialQuery={initialQuery} onBack={() => setShowChat(false)} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="landing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Nav />
+      <div
+        className={`transition-[padding-right] duration-[350ms] ease-out ${
+          showChat ? 'lg:pr-[42%]' : ''
+        }`}
+      >
+        <Nav />
 
             {/* ── HERO ── */}
             <section
@@ -363,7 +348,19 @@ export default function LandingPage() {
                 </div>
               </section>
             </RevealSection>
+      </div>
 
+      <AnimatePresence>
+        {showChat && (
+          <motion.div
+            key="chat"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
+            className="fixed inset-y-0 right-0 z-40 w-full lg:w-[42%]"
+          >
+            <ChatInterface initialQuery={initialQuery} onBack={() => setShowChat(false)} />
           </motion.div>
         )}
       </AnimatePresence>
